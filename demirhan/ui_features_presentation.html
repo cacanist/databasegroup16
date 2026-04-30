@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3NF UI Features: Customer Presentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --navy: #0a0f1e;
+      --panel: #111827;
+      --surface: #1a2235;
+      --border: #253046;
+      --teal: #00d4b4;
+      --teal-dim: #00a08a;
+      --teal-bg: rgba(0, 212, 180, 0.07);
+      --amber: #f5a623;
+      --amber-bg: rgba(245, 166, 35, 0.08);
+      --text: #e8eaf0;
+      --muted: #6b7a96;
+      --code-bg: #0d1424;
+      --code-border: #1e2d45;
+      --green: #4ade80;
+      --red: #f87171;
+      --blue: #60a5fa;
+      --slide-w: 1100px;
+      --slide-h: 650px;
+    }
+
+    html,
+    body {
+      background: #06090f;
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+      color: var(--text);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .slide-viewport {
+      width: var(--slide-w);
+      height: var(--slide-h);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 48px 32px;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: all;
+    }
+
+    .slide.exit {
+      opacity: 0;
+      transform: translateX(-60px);
+    }
+
+    /* Accent bar */
+    .slide::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--teal), transparent);
+      border-radius: 16px 16px 0 0;
+    }
+
+    /* ── HEADER ── */
+    .slide-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .slide-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      background: var(--teal-bg);
+      border: 1px solid rgba(0, 212, 180, 0.2);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .slide-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .slide-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── BODY ── */
+    .slide-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .slide-body.full {
+      grid-template-columns: 1fr;
+    }
+
+    .slide-body.three {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    /* ── CODE BLOCK ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      overflow: auto;
+      position: relative;
+    }
+
+    .code-block .cb-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cb-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .cb-dot.r {
+      background: #f87171;
+    }
+
+    .cb-dot.y {
+      background: var(--amber);
+    }
+
+    .cb-dot.g {
+      background: var(--green);
+    }
+
+    pre {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #c8d3f0;
+      white-space: pre;
+      tab-size: 4;
+    }
+
+    .kw {
+      color: #89ddff;
+    }
+
+    .fn {
+      color: #82aaff;
+    }
+
+    .str {
+      color: #c3e88d;
+    }
+
+    .cm {
+      color: #546e7a;
+      font-style: italic;
+    }
+
+    .num {
+      color: var(--amber);
+    }
+
+    .op {
+      color: var(--teal);
+    }
+
+    /* ── DATA TABLE ── */
+    .data-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dp-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 14px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dp-scroll {
+      overflow: auto;
+      flex: 1;
+    }
+
+    table.dg {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    table.dg thead th {
+      background: rgba(0, 212, 180, 0.06);
+      color: var(--teal);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 7px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    table.dg tbody tr {
+      border-bottom: 1px solid rgba(37, 48, 70, 0.5);
+    }
+
+    table.dg tbody tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    table.dg tbody td {
+      padding: 5px 12px;
+      color: #a8b4cc;
+      white-space: nowrap;
+    }
+
+    table.dg tbody td:first-child {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ── PUNCHLINE ── */
+    .punchline {
+      margin-top: 18px;
+      padding: 12px 18px;
+      border-left: 3px solid var(--teal);
+      background: var(--teal-bg);
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #b0c4d8;
+    }
+
+    .punchline strong {
+      color: var(--teal);
+      font-weight: 500;
+    }
+
+    /* ── SUMMARY SLIDE ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .sum-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sum-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      border-radius: 3px 0 0 3px;
+    }
+
+    .sum-card.teal::after {
+      background: var(--teal);
+    }
+
+    .sum-card.amber::after {
+      background: var(--amber);
+    }
+
+    .sum-card.blue::after {
+      background: var(--blue);
+    }
+
+    .sum-card.green::after {
+      background: var(--green);
+    }
+
+    .sum-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .sum-card p {
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .sum-pill {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      margin-top: 8px;
+    }
+
+    .sum-pill.teal {
+      background: var(--teal-bg);
+      color: var(--teal);
+      border: 1px solid rgba(0, 212, 180, 0.2);
+    }
+
+    .sum-pill.amber {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border: 1px solid rgba(245, 166, 35, 0.2);
+    }
+
+    .sum-pill.blue {
+      background: rgba(96, 165, 250, 0.08);
+      color: var(--blue);
+      border: 1px solid rgba(96, 165, 250, 0.2);
+    }
+
+    .sum-pill.green {
+      background: rgba(74, 222, 128, 0.08);
+      color: var(--green);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+    }
+
+    /* ── HANDOFF SLIDE ── */
+    .handoff-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .handoff-quote {
+      font-size: 16px;
+      line-height: 1.75;
+      color: #c8d3f0;
+      border-left: 3px solid var(--teal);
+      padding-left: 20px;
+      font-style: italic;
+    }
+
+    .handoff-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface);
+    }
+
+    .timeline {
+      display: flex;
+      gap: 0;
+      margin-top: 10px;
+    }
+
+    .tl-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .tl-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .tl-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      z-index: 1;
+      position: relative;
+    }
+
+    .tl-dot.active {
+      background: var(--teal-bg);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .tl-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── NAV ── */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 20px;
+      width: var(--slide-w);
+      justify-content: space-between;
+    }
+
+    .nav-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      padding: 8px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--teal);
+      background: var(--teal-bg);
+      color: var(--teal);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .nav-btn:disabled:hover {
+      border-color: var(--border);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: background 0.2s, width 0.2s;
+    }
+
+    .dot.active {
+      background: var(--teal);
+      width: 20px;
+      border-radius: 3px;
+    }
+
+    .progress-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ── TIMER ── */
+    .timer-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background: var(--teal-dim);
+      border-radius: 0 0 16px 16px;
+      transition: width 1s linear;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Q5 delete steps */
+    .delete-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 10px 0;
+    }
+
+    .ds {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .ds-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--red);
+      flex-shrink: 0;
+    }
+
+    .ds-text {
+      color: #a8b4cc;
+    }
+
+    .ds-text span {
+      color: #fff;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="deck">
+    <div class="slide-viewport" id="viewport">
+
+      <!-- ─── SLIDE 0 · HANDOFF ─── -->
+      <div class="slide active" id="slide-0">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">User Interface: Capabilities Review</div>
+            <div class="slide-title">What Does This Architecture<br>Actually Do For You?</div>
+          </div>
+          <div class="slide-num">00 / 06<br><span style="color:var(--teal)">Handoff</span></div>
+        </div>
+
+        <div class="handoff-body">
+          <div class="handoff-quote">
+            "We've taken you through the data exploration, the normalization process, and the structural blueprint of
+            our new Entity-Relationship diagram. But what does all this structural engineering actually do for your
+            <strong style="color:var(--teal);font-style:normal">day to day operations?</strong>"
+          </div>
+
+          <div style="margin-top:8px;">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">I will walk you through five specific UI
+              capabilities mapped directly to your expanded scope requests, including the new page suggestion tracking.
+            </p>
+            <div class="handoff-chips">
+              <span class="chip">Analytics &amp; Reporting</span>
+              <span class="chip">Operations &amp; Tracking</span>
+              <span class="chip">Suggestion Attribution</span>
+              <span class="chip">Data Compliance</span>
+              <span class="chip">Cascade Safety</span>
+            </div>
+          </div>
+
+          <div class="timeline" style="margin-top:14px;">
+            <div class="tl-step">
+              <div class="tl-dot">01</div>
+              <div class="tl-label">Visitor Browser<br>Matrix</div>
+            </div>
+            <div class="tl-step">
+              <div class="tl-dot">02</div>
+              <div class="tl-label">Monthly<br>Visitors</div>
+            </div>
+            <div class="tl-step">
+              <div class="tl-dot">03</div>
+              <div class="tl-label">Region<br>Update</div>
+            </div>
+            <div class="tl-step">
+              <div class="tl-dot">04</div>
+              <div class="tl-label">Page Visit<br>Insert</div>
+            </div>
+            <div class="tl-step">
+              <div class="tl-dot active">05</div>
+              <div class="tl-label" style="color:var(--teal)">Surgical<br>Deletion</div>
+            </div>
+          </div>
+        </div>
+
+          <strong>Agenda:</strong> 5 queries, 5 minutes, every line of SQL maps to a real business ask.
+        <div class="timer-bar" id="timer-0" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 1 · Q1 ─── -->
+      <div class="slide" id="slide-1">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Q1: Analytics</div>
+            <div class="slide-title">Visitor Browser Matrix</div>
+          </div>
+          <div class="slide-num">01 / 06<br><span style="color:var(--teal)">Reporting</span></div>
+        </div>
+
+        <div class="slide-body">
+          <div class="code-block">
+            <div class="cb-label"><span class="cb-dot r"></span><span class="cb-dot y"></span><span
+                class="cb-dot g"></span>&nbsp;SQL: visitors_browser_matrix.sql</div>
+            <pre><span class="kw">SELECT</span>
+    v.Visitor_ID, v.VisitorType,
+    cr.Region_ID, v.Country,
+    bi.Browser_ID       <span class="kw">AS</span> Browser,
+    bi.BrowserVersion
+<span class="kw">FROM</span>       <span class="fn">VISITOR</span>        v
+<span class="kw">JOIN</span>       <span class="fn">COUNTRY_REGION</span> cr
+    <span class="kw">ON</span>  v.Country     = cr.Country
+<span class="kw">LEFT JOIN</span> <span class="fn">SESSION</span>        s
+    <span class="kw">ON</span>  v.Visitor_ID  = s.Visitor_ID
+<span class="kw">LEFT JOIN</span> <span class="fn">SYSTEM_CONFIG</span>  sc
+    <span class="kw">ON</span>  s.Config_ID   = sc.Config_ID
+<span class="kw">LEFT JOIN</span> <span class="fn">BROWSER_INFO</span>   bi
+    <span class="kw">ON</span>  sc.Browser_ID = bi.Browser_ID
+<span class="kw">ORDER BY</span> v.Visitor_ID;</pre>
+          </div>
+
+          <div class="data-panel">
+            <div class="dp-label">Query Output: 14 sample rows</div>
+            <div class="dp-scroll">
+              <table class="dg">
+                <thead>
+                  <tr>
+                    <th>Visitor_ID</th>
+                    <th>VisitorType</th>
+                    <th>Region</th>
+                    <th>Country</th>
+                    <th>Browser</th>
+                    <th>Version</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>7168</td>
+                    <td>Returning</td>
+                    <td>3</td>
+                    <td>United Kingdom</td>
+                    <td>1</td>
+                    <td>124.0</td>
+                  </tr>
+                  <tr>
+                    <td>7169</td>
+                    <td>New</td>
+                    <td>2</td>
+                    <td>United States</td>
+                    <td>4</td>
+                    <td>109.0</td>
+                  </tr>
+                  <tr>
+                    <td>7170</td>
+                    <td>Returning</td>
+                    <td>3</td>
+                    <td>United Kingdom</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7171</td>
+                    <td>New</td>
+                    <td>6</td>
+                    <td>Brazil</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7172</td>
+                    <td>Returning</td>
+                    <td>6</td>
+                    <td>Brazil</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7173</td>
+                    <td>Returning</td>
+                    <td>6</td>
+                    <td>Brazil</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7174</td>
+                    <td>New</td>
+                    <td>2</td>
+                    <td>United States</td>
+                    <td>1</td>
+                    <td>124.0</td>
+                  </tr>
+                  <tr>
+                    <td>7175</td>
+                    <td>Returning</td>
+                    <td>1</td>
+                    <td>Germany</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7176</td>
+                    <td>Returning</td>
+                    <td>3</td>
+                    <td>United Kingdom</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7177</td>
+                    <td>New</td>
+                    <td>1</td>
+                    <td>Germany</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7178</td>
+                    <td>Returning</td>
+                    <td>1</td>
+                    <td>Germany</td>
+                    <td>6</td>
+                    <td>99.0</td>
+                  </tr>
+                  <tr>
+                    <td>7179</td>
+                    <td>New</td>
+                    <td>5</td>
+                    <td>France</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7180</td>
+                    <td>Returning</td>
+                    <td>2</td>
+                    <td>United States</td>
+                    <td>2</td>
+                    <td>115.0</td>
+                  </tr>
+                  <tr>
+                    <td>7181</td>
+                    <td>Returning</td>
+                    <td>8</td>
+                    <td>India</td>
+                    <td>3</td>
+                    <td>17.1</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="punchline">
+          <strong>Insight:</strong> A <code
+            style="color:var(--blue);font-family:'DM Mono',monospace;font-size:11px">LEFT JOIN</code> ensures even newly
+          registered users without active sessions appear on lists, eliminating "ghost user" gaps in BI tools.
+        </div>
+        <div class="timer-bar" id="timer-1" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 2 · Q2 ─── -->
+      <div class="slide" id="slide-2">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Q2: Analytics</div>
+            <div class="slide-title">Unique Monthly Visitors</div>
+          </div>
+          <div class="slide-num">02 / 06<br><span style="color:var(--teal)">Seasonality</span></div>
+        </div>
+
+        <div class="slide-body">
+          <div class="code-block">
+            <div class="cb-label"><span class="cb-dot r"></span><span class="cb-dot y"></span><span
+                class="cb-dot g"></span>&nbsp;SQL: monthly_unique_visitors.sql</div>
+            <pre><span class="kw">SELECT</span>
+    tc.Month,
+    mi.Quarter,
+    <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> s.Visitor_ID)
+        <span class="kw">AS</span> Visitor_Count
+<span class="kw">FROM</span>      <span class="fn">TIME_CONTEXT</span> tc
+<span class="kw">JOIN</span>      <span class="fn">MONTH_INFO</span>   mi
+    <span class="kw">ON</span>  tc.Month   = mi.Month
+<span class="kw">JOIN</span>      <span class="fn">SESSION</span>      s
+    <span class="kw">ON</span>  tc.Time_ID = s.Time_ID
+<span class="kw">GROUP BY</span> tc.Month, mi.Quarter
+<span class="kw">ORDER BY</span> Visitor_Count <span class="kw">DESC</span>;</pre>
+          </div>
+
+          <div class="data-panel">
+            <div class="dp-label">Query Output: sorted by traffic</div>
+            <div class="dp-scroll">
+              <table class="dg">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Quarter</th>
+                    <th>Visitor_Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>May</td>
+                    <td>Q2</td>
+                    <td style="color:var(--teal);font-weight:600">3,297</td>
+                  </tr>
+                  <tr>
+                    <td>Nov</td>
+                    <td>Q4</td>
+                    <td>2,916</td>
+                  </tr>
+                  <tr>
+                    <td>Mar</td>
+                    <td>Q1</td>
+                    <td>1,871</td>
+                  </tr>
+                  <tr>
+                    <td>Dec</td>
+                    <td>Q4</td>
+                    <td>1,709</td>
+                  </tr>
+                  <tr>
+                    <td>Oct</td>
+                    <td>Q4</td>
+                    <td>548</td>
+                  </tr>
+                  <tr>
+                    <td>Sep</td>
+                    <td>Q3</td>
+                    <td>448</td>
+                  </tr>
+                  <tr>
+                    <td>Aug</td>
+                    <td>Q3</td>
+                    <td>430</td>
+                  </tr>
+                  <tr>
+                    <td>Jul</td>
+                    <td>Q3</td>
+                    <td>430</td>
+                  </tr>
+                  <tr>
+                    <td>June</td>
+                    <td>Q2</td>
+                    <td>288</td>
+                  </tr>
+                  <tr>
+                    <td>Feb</td>
+                    <td>Q1</td>
+                    <td>182</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="punchline">
+          <strong>Insight:</strong> Counting <code
+            style="color:var(--blue);font-family:'DM Mono',monospace;font-size:11px">DISTINCT</code> Visitor_IDs
+          prevents highly active returning users from artificially inflating monthly traffic reports, you get
+          mathematically accurate unique visitor metrics.
+        </div>
+        <div class="timer-bar" id="timer-2" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 3 · Q3 ─── -->
+      <div class="slide" id="slide-3">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Q3: Operations</div>
+            <div class="slide-title">Relational Region Updates</div>
+          </div>
+          <div class="slide-num">03 / 06<br><span style="color:var(--amber)">Zero Anomaly</span></div>
+        </div>
+
+        <div class="slide-body three">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="code-block">
+              <div class="cb-label"><span class="cb-dot r"></span><span class="cb-dot y"></span><span
+                  class="cb-dot g"></span>&nbsp;SQL: update_visitor_region.sql</div>
+              <pre><span class="kw">UPDATE</span> <span class="fn">VISITOR</span>
+<span class="kw">SET</span>   Country = <span class="str">'Japan'</span>
+<span class="kw">WHERE</span> Visitor_ID = <span class="num">1</span>;</pre>
+            </div>
+
+            <div class="code-block" style="flex:1">
+              <div class="cb-label">Old model: previous behavior</div>
+              <pre><span class="cm">-- In a 35-col UNF spreadsheet:</span>
+<span class="cm">-- You'd have to find and UPDATE</span>
+<span class="cm">-- EVERY ROW that visitor generated.</span>
+<span class="cm">-- Miss one? Data inconsistency.</span>
+<span class="cm">-- 1000 visits = 1000 manual edits.</span>
+
+<span class="kw">UPDATE</span> <span class="fn">RAW_DATA</span> <span class="cm">-- ← single giant table</span>
+<span class="kw">SET</span>   Region = <span class="str">'Asia'</span>,
+      Country = <span class="str">'Japan'</span>
+<span class="kw">WHERE</span> VisitorID = <span class="num">1</span>;
+<span class="cm">-- Affected rows: 1,000+. Risky.</span></pre>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="data-panel" style="flex:1">
+              <div class="dp-label">Before &amp; After: single row update</div>
+              <div class="dp-scroll" style="padding:14px 16px">
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Before UPDATE</div>
+                <table class="dg" style="margin-bottom:14px">
+                  <thead>
+                    <tr>
+                      <th>Visitor_ID</th>
+                      <th>Country</th>
+                      <th>Region (resolved)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td style="color:var(--red)">Germany</td>
+                      <td style="color:var(--red)">1: Europe</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:10px">After UPDATE</div>
+                <table class="dg">
+                  <thead>
+                    <tr>
+                      <th>Visitor_ID</th>
+                      <th>Country</th>
+                      <th>Region (resolved)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td style="color:var(--green)">Japan</td>
+                      <td style="color:var(--green)">7: Asia</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div
+                  style="margin-top:14px;padding:10px 12px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--green)">
+                  ✓ Rows affected: 1, Anomalies: 0
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="punchline">
+          <strong>Insight:</strong> Updating a user's <code
+            style="color:var(--blue);font-family:'DM Mono',monospace;font-size:11px">Country</code> automatically
+          resolves their new Region via lookup tables, one write, zero update anomalies, the entire database stays
+          consistent.
+        </div>
+        <div class="timer-bar" id="timer-3" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 4 · Q4 ─── -->
+      <div class="slide" id="slide-4">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Q4: Operations + New Scope</div>
+            <div class="slide-title">Page Visit &amp; Suggestion Attribution</div>
+          </div>
+          <div class="slide-num">04 / 06<br><span style="color:var(--amber)">Attribution</span></div>
+        </div>
+
+        <div class="slide-body">
+          <div class="code-block">
+            <div class="cb-label"><span class="cb-dot r"></span><span class="cb-dot y"></span><span
+                class="cb-dot g"></span>&nbsp;SQL: insert_page_visit.sql</div>
+            <pre><span class="kw">INSERT INTO</span> <span class="fn">PAGE_VISIT</span> (
+    Session_ID,
+    Page_ID,
+    VisitTimestamp,
+    TimeOnPage,
+    ScrollDepth,
+    Referrer_URL,
+    Suggestion_ID     <span class="cm">-- ← expanded scope</span>
+)
+<span class="kw">VALUES</span> (
+    <span class="num">5553</span>,
+    <span class="num">11</span>,
+    <span class="fn">NOW</span>(),
+    <span class="num">120.5</span>,       <span class="cm">-- seconds on page</span>
+    <span class="num">75</span>,           <span class="cm">-- scroll depth %</span>
+    <span class="str">'https://www.google.com'</span>,
+    <span class="kw">NULL</span>          <span class="cm">-- organic (no referral)</span>
+);</pre>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="data-panel" style="flex:1">
+              <div class="dp-label">PAGE_VISIT schema: new columns highlighted</div>
+              <div class="dp-scroll">
+                <table class="dg">
+                  <thead>
+                    <tr>
+                      <th>Column</th>
+                      <th>Type</th>
+                      <th>Purpose</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Session_ID</td>
+                      <td style="color:var(--muted)">FK</td>
+                      <td style="color:var(--muted)">Links to session</td>
+                    </tr>
+                    <tr>
+                      <td>Page_ID</td>
+                      <td style="color:var(--muted)">FK</td>
+                      <td style="color:var(--muted)">Exact URL reference</td>
+                    </tr>
+                    <tr>
+                      <td>VisitTimestamp</td>
+                      <td style="color:var(--muted)">DATETIME</td>
+                      <td style="color:var(--muted)">When visit occurred</td>
+                    </tr>
+                    <tr>
+                      <td>TimeOnPage</td>
+                      <td style="color:var(--muted)">FLOAT</td>
+                      <td style="color:var(--muted)">Engagement depth</td>
+                    </tr>
+                    <tr>
+                      <td>ScrollDepth</td>
+                      <td style="color:var(--muted)">INT</td>
+                      <td style="color:var(--muted)">% page scrolled</td>
+                    </tr>
+                    <tr>
+                      <td>Referrer_URL</td>
+                      <td style="color:var(--muted)">VARCHAR</td>
+                      <td style="color:var(--muted)">Traffic source</td>
+                    </tr>
+                    <tr>
+                      <td style="color:var(--teal)">Suggestion_ID</td>
+                      <td style="color:var(--teal)">FK, NULL</td>
+                      <td style="color:var(--teal)">Social ROI tracker ★</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div
+              style="padding:12px 14px;background:var(--amber-bg);border:1px solid rgba(245,166,35,0.2);border-radius:8px">
+              <div
+                style="font-size:10px;font-family:'DM Mono',monospace;color:var(--amber);letter-spacing:0.08em;margin-bottom:6px">
+                EXPANDED SCOPE: SUGGESTION TRACKING</div>
+              <div style="font-size:12px;color:#c8b070;line-height:1.6">When <code
+                  style="font-family:'DM Mono',monospace">Suggestion_ID</code> is <strong>NOT NULL</strong>, the visit
+                is traced back to a specific user recommendation, enabling you to calculate the exact ROI of your
+                social suggestion feature.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="punchline">
+          <strong>Insight:</strong> New events map exact URLs, scroll depth, and Suggestion_ID, providing pixel-perfect
+          attribution to calculate the ROI of your user-suggestion feature.
+        </div>
+        <div class="timer-bar" id="timer-4" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 5 · Q5 ─── -->
+      <div class="slide" id="slide-5">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Q5: Compliance &amp; Security</div>
+            <div class="slide-title">Surgical User Deletion</div>
+          </div>
+          <div class="slide-num">05 / 06<br><span style="color:var(--red)">GDPR Safe</span></div>
+        </div>
+
+        <div class="slide-body">
+          <div class="code-block">
+            <div class="cb-label"><span class="cb-dot r"></span><span class="cb-dot y"></span><span
+                class="cb-dot g"></span>&nbsp;SQL: delete_visitor_cascade.sql</div>
+            <pre><span class="cm">-- Step 1: Nullify suggestion credits given to others</span>
+<span class="kw">UPDATE</span> <span class="fn">SESSION</span>
+<span class="kw">SET</span>   SuggestedBy = <span class="kw">NULL</span>
+<span class="kw">WHERE</span> SuggestedBy = <span class="num">1</span>;
+
+<span class="cm">-- Step 2: Remove page visit records</span>
+<span class="kw">DELETE FROM</span> <span class="fn">PAGE_VISIT</span>
+<span class="kw">WHERE</span> Session_ID <span class="op">IN</span> (
+    <span class="kw">SELECT</span> Session_ID <span class="kw">FROM</span> <span class="fn">SESSION</span>
+    <span class="kw">WHERE</span>  Visitor_ID = <span class="num">1</span>
+);
+
+<span class="cm">-- ... Steps 3–6: metrics, activity,</span>
+<span class="cm">--     sessions, suggestions removed ...</span>
+
+<span class="cm">-- Step 7: Remove the visitor record</span>
+<span class="kw">DELETE FROM</span> <span class="fn">VISITOR</span>
+<span class="kw">WHERE</span> Visitor_ID = <span class="num">1</span>;</pre>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="data-panel" style="flex:1">
+              <div class="dp-label">7 step bottom up deletion order</div>
+              <div class="dp-scroll" style="padding:10px 12px">
+                <div class="delete-steps">
+                  <div class="ds">
+                    <div class="ds-num">1</div>
+                    <div class="ds-text">Nullify <span>SuggestedBy</span> references in SESSION</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num">2</div>
+                    <div class="ds-text">Delete <span>PAGE_VISIT</span> records</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num">3</div>
+                    <div class="ds-text">Delete <span>PAGE_METRICS</span> records</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num">4</div>
+                    <div class="ds-text">Delete <span>ACTIVITY_LOG</span> records</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num">5</div>
+                    <div class="ds-text">Delete <span>SESSION</span> records</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num">6</div>
+                    <div class="ds-text">Delete <span>SUGGESTION</span> records</div>
+                  </div>
+                  <div class="ds">
+                    <div class="ds-num" style="background:rgba(248,113,113,0.2);border-color:rgba(248,113,113,0.4)">7
+                    </div>
+                    <div class="ds-text">Delete <span>VISITOR</span> profile</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="padding:10px 14px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.15);border-radius:8px;font-size:12px;color:#c8a0a0;line-height:1.6">
+              Referential integrity remains <strong style="color:#f87171">100% intact</strong>. No orphaned records. No
+              accidental page deletions.
+            </div>
+          </div>
+        </div>
+
+        <div class="punchline">
+          <strong>Insight:</strong> A 7-step bottom-up deletion protocol safely unwires all user footprints without
+          violating foreign key constraints: surgical, compliant, and irreversible.
+        </div>
+        <div class="timer-bar" id="timer-5" style="width:0%"></div>
+      </div>
+
+      <!-- ─── SLIDE 6 · SUMMARY ─── -->
+      <div class="slide" id="slide-6">
+        <div class="slide-header">
+          <div>
+            <div class="slide-tag">Executive Summary: What We Delivered</div>
+            <div class="slide-title">Turning Raw Data Into a<br>Reliable Business Engine</div>
+          </div>
+          <div class="slide-num">06 / 06<br><span style="color:var(--teal)">Delivery</span></div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="sum-card teal">
+            <h3>Complete Structural Transformation</h3>
+            <p>Successfully migrated a volatile 35-column Unnormalized Form spreadsheet into a mathematically sound
+              11-table 3rd Normal Form relational database.</p>
+            <span class="sum-pill teal">UNF to 3NF, 35 cols to 12 tables</span>
+          </div>
+          <div class="sum-card amber">
+            <h3>Zero Data Anomalies</h3>
+            <p>Strict primary and foreign keys completely eliminate the insert, update, and delete anomalies that were
+              threatening data accuracy in the old model.</p>
+            <span class="sum-pill amber">Insert, Update, Delete anomalies = 0</span>
+          </div>
+          <div class="sum-card blue">
+            <h3>Reduced Maintenance Cost</h3>
+            <p>Dedicated lookup tables for countries, browsers, and time contexts make the data scalable and
+              dramatically cheaper to maintain as your business grows.</p>
+            <span class="sum-pill blue">Countries, Browsers, Time, Regions</span>
+          </div>
+          <div class="sum-card green">
+            <h3>Full Documentation Delivered</h3>
+            <p>A complete, documented ER diagram with all keys and relationships mapped out, ready for your development
+              team to build on immediately.</p>
+            <span class="sum-pill green">ER Diagram, PKs, FKs, Relationships</span>
+          </div>
+        </div>
+
+        <div class="punchline" style="margin-top:16px">
+          <strong>Delivered:</strong> High-fidelity suggestion attribution, surgical compliance protocols,
+          mathematically accurate visitor metrics, scalable architecture ready for production.
+        </div>
+        <div class="timer-bar" id="timer-6" style="width:0%"></div>
+      </div>
+
+    </div><!-- /viewport -->
+
+    <!-- NAV -->
+    <div class="nav-bar">
+      <button class="nav-btn" id="btn-prev" onclick="navigate(-1)" disabled>← Prev</button>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="nav-dots" id="dots"></div>
+        <span class="progress-label" id="prog-label">Slide 1 of 7</span>
+      </div>
+      <button class="nav-btn" id="btn-next" onclick="navigate(1)">Next →</button>
+    </div>
+  </div><!-- /deck -->
+
+  <script>
+    const TOTAL = 7;
+    let current = 0;
+
+    const dots = document.getElementById('dots');
+    for (let i = 0; i < TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      d.onclick = () => goTo(i);
+      dots.appendChild(d);
+    }
+
+    function goTo(idx) {
+      const prev = document.getElementById('slide-' + current);
+      prev.classList.remove('active');
+      prev.classList.add('exit');
+      setTimeout(() => prev.classList.remove('exit'), 400);
+
+      current = idx;
+      const next = document.getElementById('slide-' + current);
+      next.classList.add('active');
+
+      dots.querySelectorAll('.dot').forEach((d, i) => {
+        d.classList.toggle('active', i === current);
+      });
+
+      document.getElementById('btn-prev').disabled = current === 0;
+      document.getElementById('btn-next').disabled = current === TOTAL - 1;
+      document.getElementById('prog-label').textContent = 'Slide ' + (current + 1) + ' of ' + TOTAL;
+    }
+
+    function navigate(dir) {
+      const next = current + dir;
+      if (next >= 0 && next < TOTAL) goTo(next);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+    });
+
+    document.getElementById('prog-label').textContent = 'Slide 1 of ' + TOTAL;
+  </script>
+</body>
+
+</html>

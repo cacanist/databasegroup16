@@ -1,0 +1,139 @@
+Structure per Slide:
+1.  Header: Bold title (e.g., "Q1 · [Topic]").
+2.  Code Block: The exact SQL query used to pull or manipulate the data.
+3.  Data Grid: A clean table showing the query's output.
+4.  The "Punchline": A single, vertical-bar-quoted sentence at the bottom summarizing the exact business value or insight.
+
+
+
+Q1 · Visitor Browser Matrix
+
+SELECT
+    v.Visitor_ID, v.VisitorType, cr.Region_ID, v.Country,
+    bi.Browser_ID AS Browser, bi.BrowserVersion
+FROM VISITOR v
+JOIN  COUNTRY_REGION    cr ON  v.Country     = cr.Country
+LEFT JOIN SESSION       s  ON  v.Visitor_ID  = s.Visitor_ID
+LEFT JOIN SYSTEM_CONFIG sc ON  s.Config_ID   = sc.Config_ID
+LEFT JOIN BROWSER_INFO  bi ON  sc.Browser_ID = bi.Browser_ID
+ORDER BY v.Visitor_ID;
+
+Data Table Headers: Visitor_ID | VisitorType | Region_ID | Country | Browser | BrowserVersion
+
+7168	Returning_Visitor	3	United Kingdom	1	124.0
+7169	New_Visitor	2	United States	4	109.0
+7170	Returning_Visitor	3	United Kingdom	2	115.0
+7171	New_Visitor	6	Brazil	2	115.0
+7172	Returning_Visitor	6	Brazil	2	115.0
+7173	Returning_Visitor	6	Brazil	2	115.0
+7174	New_Visitor	2	United States	1	124.0
+7175	Returning_Visitor	1	Germany	2	115.0
+7176	Returning_Visitor	3	United Kingdom	2	115.0
+7177	New_Visitor	1	Germany	2	115.0
+7178	Returning_Visitor	1	Germany	6	99.0
+7179	New_Visitor	5	France	2	115.0
+7180	Returning_Visitor	2	United States	2	115.0
+7181	Returning_Visitor	8	India	3	17.1
+
+Bottom Takeaway: > A LEFT JOIN ensures even newly registered users without active sessions appear on lists—eliminating "ghost user" gaps in BI tools.
+
+
+
+
+
+Q2 · Unique Monthly Visitors
+
+SELECT
+    tc.Month,
+    mi.Quarter,
+    COUNT(DISTINCT s.Visitor_ID) AS Visitor_Count
+FROM TIME_CONTEXT tc
+JOIN MONTH_INFO mi ON  tc.Month   = mi.Month
+JOIN SESSION    s  ON  tc.Time_ID = s.Time_ID
+GROUP BY tc.Month, mi.Quarter
+ORDER BY Visitor_Count DESC;
+
+Data Table Headers: Month | Quarter | Visitor_Count
+
+May	2	3297
+Nov	4	2916
+Mar	1	1871
+Dec	4	1709
+Oct	4	548
+Sep	3	448
+Aug	3	430
+Jul	3	430
+June	2	288
+Feb	1	182
+
+Bottom Takeaway: > Counting DISTINCT Visitor_IDs prevents highly active returning users from artificially inflating monthly traffic reports.
+
+
+
+
+
+Q3 · Relational Region Updates
+
+UPDATE VISITOR
+SET Country = 'Japan'
+WHERE Visitor_ID = 1;
+
+("See? Nothing happened! Zero anomalies.")
+
+Bottom Takeaway: > Updating a user's Country automatically resolves their new Region via lookup tables—zero update anomalies.
+
+
+
+
+
+Q4 · Page Visit & Suggestion Attribution
+
+INSERT INTO PAGE_VISIT 
+    (Session_ID, Page_ID, VisitTimestamp, TimeOnPage, ScrollDepth, Referrer_URL, Suggestion_ID) 
+VALUES 
+    (5553, 11, NOW(), 120.5, 75, 'https://www.google.com', NULL);
+
+("Done")
+
+Bottom Takeaway: > New events map exact URLs, scroll depth, and Suggestion_ID, providing pixel-perfect attribution for social ROI.
+
+
+
+
+
+Q5 · Surgical User Deletion
+
+UPDATE SESSION SET SuggestedBy = NULL WHERE SuggestedBy = 1;
+DELETE FROM PAGE_VISIT WHERE Session_ID IN (SELECT Session_ID FROM SESSION WHERE Visitor_ID = 1);
+-- ... (cascades through metrics, activity, sessions, suggestions) ...
+DELETE FROM VISITOR WHERE Visitor_ID = 1;
+
+("Done")
+
+Bottom Takeaway: > A 7-step bottom-up deletion protocol safely unwires user footprints without violating strict foreign key constraints.
+
+
+
+
+
+Database
+
+35-column UNF → 11-table 3NF schema
+
+Insert / update / delete anomalies eliminated
+
+Lookup tables reduce maintenance cost
+
+Documented ER diagram with keys and relationships
+
+
+
+Operational Power
+
+High-fidelity attribution for page suggestions
+
+Surgical data compliance protocols
+
+Guaranteed mathematically accurate unique visitor metrics
+
+Scalable architecture ready for production deployment

@@ -1,0 +1,3955 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+
+  <meta charset="utf-8">
+  <title>Visitor Analytics: CSE 204 Group 16</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-2: #f9f9f9;
+      --panel: #ffffff;
+      --panel-2: #f5f5f5;
+      --border: #eeeeee;
+      --text: #000000;
+      --muted: #666666;
+      --accent: #000000;
+      --accent-2: #333333;
+      --good: #000000;
+      --bad: #666666;
+      --purple: #444444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    html {
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    html,
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+      cursor: none !important;
+    }
+
+    /* Selectively hide cursor on interactive elements to ensure smooth cursor feel WITHOUT hitting all elements */
+    a,
+    button,
+    .slide,
+    .team-card,
+    .nav a,
+    .theme-toggler {
+      cursor: none !important;
+    }
+
+    /* SVG filters can be expensive, apply sparingly */
+    .morphing-text {
+      will-change: filter, opacity;
+    }
+
+
+    #smooth-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 32px;
+      height: 35px;
+      margin-left: -16px;
+      margin-top: -18px;
+      pointer-events: none;
+      z-index: 9999;
+      will-change: transform;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      display: none;
+    }
+
+    @media (any-hover: hover) and (any-pointer: fine) {
+      #smooth-cursor {
+        display: block;
+      }
+    }
+
+    /* ---------- Slide shell ---------- */
+    .slide {
+      height: 100vh;
+      /* Fixed height for presentation */
+      width: 100%;
+      padding: 40px 60px;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      /* Prevent internal scrolling */
+    }
+
+    .slide::before {
+      content: attr(data-n) " / " attr(data-total);
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.15em;
+    }
+
+    .slide::after {
+      content: attr(data-section);
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+
+    /* ---------- Typography ---------- */
+    h1 {
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+      line-height: 1.05;
+    }
+
+    h2 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent-2);
+      margin-bottom: 8px;
+    }
+
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent-2);
+      margin-bottom: 4px;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    strong {
+      color: var(--accent-2);
+      font-weight: 600;
+    }
+
+    ul {
+      padding-left: 22px;
+    }
+
+    ul li {
+      font-size: 16px;
+      margin-bottom: 7px;
+      color: var(--text);
+      opacity: 0.7;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .small {
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .tiny {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #f5f5f5;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    /* ---------- Layout helpers ---------- */
+    .eyebrow {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 22px;
+    }
+
+    .five-col {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    .stack>*+* {
+      margin-top: 16px;
+    }
+
+    /* ---------- Stat blocks ---------- */
+    .stat {
+      text-align: center;
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .stat .n {
+      display: block;
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    .stat .l {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-top: 6px;
+    }
+
+    /* ---------- Team cards ---------- */
+    .team-section {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .team-bg-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 320px;
+      font-weight: 900;
+      color: rgba(0, 0, 0, 0.025);
+      z-index: 0;
+      white-space: nowrap;
+      letter-spacing: -0.05em;
+      pointer-events: none;
+      animation: pulseBg 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseBg {
+      0% {
+        transform: translate(-50%, -50%) scale(0.98);
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: translate(-50%, -50%) scale(1.02);
+        opacity: 1;
+      }
+    }
+
+    .team-card {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      background: transparent;
+      border: none;
+      padding: 18px 24px;
+      text-align: left;
+      transition: all .3s ease;
+      position: relative;
+      min-width: 320px;
+      opacity: 0;
+      transform: translateY(20px);
+      z-index: 2;
+    }
+
+    .slide.in-view .team-card {
+      animation: teamCardFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .team-card:nth-child(1) {
+      animation-delay: 0.1s;
+    }
+
+    .team-card:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .team-card:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    .team-card:nth-child(4) {
+      animation-delay: 0.4s;
+    }
+
+    .team-card:nth-child(5) {
+      animation-delay: 0.5s;
+    }
+
+    @keyframes teamCardFadeUp {
+      0% {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .team-card:hover {
+      background: var(--panel-2);
+      border-radius: 64px;
+    }
+
+    .team-card .avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #eee;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 28px;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 5px #ffffff, 0 0 0 6px #e5e5e5;
+    }
+
+    .team-card .info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .team-card .name {
+      color: var(--text);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .team-card .role {
+      color: var(--muted);
+      font-size: 18px;
+      margin-top: 6px;
+      font-weight: 400;
+      line-height: 1.2;
+    }
+
+    /* ---------- Cards ---------- */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+
+    .card.alt {
+      border-left-color: var(--accent-2);
+    }
+
+    .card.good {
+      border-left-color: var(--good);
+    }
+
+    .card.bad {
+      border-left-color: var(--bad);
+    }
+
+    .card h4 {
+      margin-bottom: 4px;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .callout {
+      background: rgba(0, 0, 0, 0.03);
+      border-left: 4px solid var(--accent-2);
+      padding: 10px 16px;
+      border-radius: 4px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .callout.good {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: var(--good);
+    }
+
+    .callout.bad {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: var(--bad);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--panel-2);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-right: 6px;
+    }
+
+    .badge.bad {
+      background: #eee;
+      color: #666;
+    }
+
+    .badge.good {
+      background: #000;
+      color: #fff;
+    }
+
+    /* ---------- Tables ---------- */
+    table {
+      border-collapse: collapse;
+      margin: 14px 0;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    thead th {
+      background: #f5f5f5;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    /* UNF auto-scroll marquee (JS controlled) */
+    .table-wrap.unf-marquee {
+      overflow-x: auto;
+      cursor: default;
+      position: relative;
+    }
+
+    /* ---------- Code blocks ---------- */
+    pre.sql {
+      background: #111111;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      overflow: auto;
+      font-size: 10.5px;
+      line-height: 1.35;
+      font-family: ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", monospace;
+      color: #eeeeee;
+      max-height: none;
+      /* Allow full height as requested */
+      max-width: 100%;
+    }
+
+    .slide[data-section^="Q"] pre.sql {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .kw {
+      color: #ffffff;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    .fn {
+      color: #ffffff;
+    }
+
+    .st {
+      color: #888888;
+    }
+
+    .nm {
+      color: #cccccc;
+    }
+
+    .cm {
+      color: #666666;
+      font-style: italic;
+    }
+
+    /* ---------- ER entity cards ---------- */
+    .er-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .entity {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent);
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    .entity.core {
+      border-top-color: var(--accent-2);
+    }
+
+    .entity.bridge {
+      border-top-color: var(--purple);
+    }
+
+    .entity.lookup {
+      border-top-color: var(--good);
+    }
+
+    .entity header {
+      background: #111;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .entity .attrs {
+      padding: 6px 10px;
+    }
+
+    .entity .attr {
+      display: grid;
+      grid-template-columns: 40px 1fr 34px;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      padding: 2px 0;
+      border-bottom: 1px dashed #eee;
+    }
+
+    .entity .attr:last-child {
+      border-bottom: none;
+    }
+
+    .entity .attr .t {
+      color: var(--muted);
+    }
+
+    .entity .attr .n {
+      color: var(--text);
+    }
+
+    .entity .attr .k {
+      text-align: right;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .entity .attr .k.fk {
+      color: var(--accent-2);
+    }
+
+    .rel-list {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px 16px;
+      font-size: 12px;
+    }
+
+    .rel-list .rel {
+      color: var(--muted);
+    }
+
+    .rel-list .rel b {
+      color: var(--accent);
+    }
+
+    /* ---------- Cover specifics ---------- */
+    .cover {
+      justify-content: center;
+      align-items: flex-start;
+      text-align: left;
+      position: relative;
+    }
+
+    .cover .bg-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(to right, var(--border) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: pan-grid 20s linear infinite;
+      -webkit-mask-image: radial-gradient(circle at 0% 50%, black 20%, transparent 80%);
+      mask-image: radial-gradient(circle at 0% 50%, black 20%, transparent 80%);
+    }
+
+    @keyframes pan-grid {
+      0% {
+        background-position: 0 0;
+      }
+
+      100% {
+        background-position: 48px 48px;
+      }
+    }
+
+    @keyframes coverFadeUp {
+      0% {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes coverGrowLine {
+      0% {
+        transform: scaleX(0);
+        opacity: 0;
+      }
+
+      100% {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-content>* {
+      opacity: 0;
+      animation: coverFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .cover .eyebrow {
+      color: var(--text);
+      letter-spacing: 0.35em;
+      animation-delay: 0.1s;
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+      font-weight: 600;
+    }
+
+    .cover h1 {
+      font-size: 88px;
+      color: var(--text);
+      margin-bottom: 6px;
+      margin-top: 24px;
+      letter-spacing: -0.04em;
+      animation-delay: 0.3s;
+    }
+
+    .cover h1::after {
+      content: "";
+      display: block;
+      width: 90px;
+      height: 6px;
+      background: var(--text);
+      margin-top: 28px;
+      margin-bottom: 30px;
+      border-radius: 4px;
+      opacity: 0;
+      transform-origin: left;
+      transform: scaleX(0);
+      animation: coverGrowLine 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.7s;
+    }
+
+    .cover .sub {
+      font-size: 26px;
+      color: var(--accent-2);
+      margin-bottom: 40px;
+      animation-delay: 0.8s;
+      max-width: 800px;
+      line-height: 1.3;
+    }
+
+    .cover .meta {
+      font-size: 16px;
+      color: var(--muted);
+      animation-delay: 1.0s;
+    }
+
+    .cover .meta strong {
+      color: var(--text);
+    }
+
+    /* ---------- Nav ---------- */
+    .nav {
+      position: fixed;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .nav a {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #eee;
+      border: 1px solid #ddd;
+      transition: background .2s, transform .2s;
+    }
+
+    .nav a:hover {
+      background: #ccc;
+    }
+
+    .nav a.active {
+      background: var(--accent);
+      transform: scale(1.4);
+    }
+
+    .hint {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      z-index: 100;
+      opacity: 0.7;
+    }
+
+    /* Force page-friendly scroll bg */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #eee;
+      border-radius: 4px;
+    }
+
+    /* Smaller screens */
+    @media (max-width: 1100px) {
+      .slide {
+        padding: 50px 40px;
+      }
+
+      .er-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      h1 {
+        font-size: 48px;
+      }
+
+      .cover h1 {
+        font-size: 60px;
+      }
+    }
+
+    /* Morphing Text Styles */
+    .morphing-text {
+      position: relative;
+      filter: url(#threshold) blur(0.6px);
+      width: 100%;
+      min-height: 200px;
+    }
+
+    .morphing-text span {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      margin: auto;
+      display: inline-block;
+      width: 100%;
+      white-space: pre-wrap;
+    }
+
+    /* --- Loading Screen Styles --- */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 20000;
+      /* Above everything including smooth cursor */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: none !important;
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
+
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loader-card {
+      --bg-color: #000;
+      background-color: var(--bg-color);
+      padding: 1rem 2rem;
+      border-radius: 1.25rem;
+    }
+
+    .loader {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+      font-weight: 500;
+      font-size: 28px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      border-radius: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .loader p {
+      color: rgba(255, 255, 255, 0.4);
+      margin: 0;
+      line-height: 40px;
+      text-transform: uppercase;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    .words {
+      overflow: hidden;
+      position: relative;
+      height: 40px;
+    }
+
+    .words::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(var(--bg-color) 10%,
+          transparent 30%,
+          transparent 70%,
+          var(--bg-color) 90%);
+      z-index: 20;
+    }
+
+    .word {
+      display: block;
+      height: 40px;
+      line-height: 40px;
+      padding-left: 8px;
+      color: #ffffff;
+      animation: spin_4991 4s infinite;
+      font-weight: 700;
+    }
+
+    @keyframes spin_4991 {
+      10% {
+        transform: translateY(-102%);
+      }
+
+      25% {
+        transform: translateY(-100%);
+      }
+
+      35% {
+        transform: translateY(-202%);
+      }
+
+      50% {
+        transform: translateY(-200%);
+      }
+
+      60% {
+        transform: translateY(-302%);
+      }
+
+      75% {
+        transform: translateY(-300%);
+      }
+
+      85% {
+        transform: translateY(-402%);
+      }
+
+      100% {
+        transform: translateY(-400%);
+      }
+    }
+
+    body.loading {
+      overflow: hidden !important;
+    }
+
+    /* Theme Transition Styles */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+
+    /* Dark mode variables */
+    html.dark {
+      --bg: #000000;
+      --bg-2: #0a0a0a;
+      --panel: #111111;
+      --panel-2: #1a1a1a;
+      --border: #222222;
+      --text: #ffffff;
+      --muted: #888888;
+      --accent: #ffffff;
+      --accent-2: #cccccc;
+      --good: #ffffff;
+      --bad: #888888;
+      --purple: #aaaaaa;
+    }
+
+    html.dark #loading-screen {
+      background: #000;
+    }
+
+    html.dark .loader-card {
+      background-color: #000;
+    }
+
+    html.dark #smooth-cursor path[fill="black"] {
+      fill: white;
+    }
+
+    html.dark #smooth-cursor path[stroke="white"] {
+      stroke: black;
+    }
+
+    html.dark .kbd {
+      background: #1a1a1a;
+      border-color: #333;
+    }
+
+    html.dark thead th {
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    html.dark tbody tr:nth-child(even) {
+      background: #0a0a0a;
+    }
+
+    html.dark .team-bg-text {
+      color: rgba(255, 255, 255, 0.025);
+    }
+
+    html.dark .cover .bg-grid {
+      -webkit-mask-image: radial-gradient(circle at 0% 50%, white 20%, transparent 80%);
+      mask-image: radial-gradient(circle at 0% 50%, white 20%, transparent 80%);
+    }
+
+    :root {
+      --ambient: rgba(0, 0, 0, 0.08);
+    }
+
+    html.dark {
+      --ambient: rgba(255, 255, 255, 0.12);
+    }
+
+
+
+    /* Theme Toggler Styles */
+    .theme-toggler {
+      position: fixed;
+      right: 4px;
+      top: calc(50% - 250px);
+      z-index: 10000;
+      background: transparent;
+      border: none;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none !important;
+      color: var(--text);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: none;
+    }
+
+    .theme-toggler:hover {
+      transform: translateY(-2px) scale(1.1);
+      opacity: 0.8;
+    }
+
+    .theme-toggler svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* Zoom functionality styles */
+    html {
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: 0 0;
+    }
+
+    html.is-zoomed {
+      /* Prevent scrolling while zoomed to keep focus on the area */
+      overflow: hidden;
+      will-change: transform, transform-origin;
+    }
+
+    /* Keep UI elements visually consistent or slightly adjusted during zoom */
+    html.is-zoomed #smooth-cursor {
+      filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+    }
+
+    html.is-zoomed .nav,
+    html.is-zoomed .theme-toggler,
+    html.is-zoomed .hint {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    html.is-zoomed .bg-grid,
+    html.is-zoomed .team-bg-text {
+      animation-play-state: paused;
+    }
+
+    /* ---------- SQL Runner (Run Button + Animated Table) ---------- */
+    .sql-runner {
+      position: relative;
+    }
+
+    .sql-run-btn {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: none;
+      background: transparent !important;
+      color: #ffffff !important;
+      cursor: none !important;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .sql-run-btn:hover {
+      transform: scale(1.2);
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4));
+    }
+
+    .sql-run-btn:active {
+      transform: scale(0.9);
+    }
+
+    .sql-run-btn svg {
+      width: 32px !important;
+      height: 32px !important;
+      fill: #ffffff !important;
+    }
+
+    .sql-run-btn.running svg {
+      animation: rotateIcon 1s linear infinite;
+    }
+
+    @keyframes rotateIcon {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Table animation states */
+    .sql-result-table {
+      overflow: hidden;
+    }
+
+    .sql-result-table table {
+      opacity: 1;
+    }
+
+    /* Phase 1: Table frame slides down */
+    @keyframes tableFrameIn {
+      0% {
+        opacity: 0;
+        transform: scaleY(0.3) translateY(-10px);
+      }
+
+      60% {
+        opacity: 1;
+        transform: scaleY(1.03) translateY(2px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scaleY(1) translateY(0);
+      }
+    }
+
+    /* Phase 2: Each header cell types in from left */
+    @keyframes thSlideIn {
+      0% {
+        opacity: 0;
+        transform: translateX(-8px);
+        clip-path: inset(0 100% 0 0);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+        clip-path: inset(0 0% 0 0);
+      }
+    }
+
+    /* Phase 3: Each row fades+slides up */
+    @keyframes rowFadeUp {
+      0% {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Hidden state before run */
+    .sql-result-table.hidden {
+      opacity: 0;
+      pointer-events: none;
+      max-height: 0;
+    }
+
+    .sql-result-table.phase1 {
+      animation: tableFrameIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-height: none;
+      opacity: 1;
+    }
+
+    .sql-result-table.phase1 thead th,
+    .sql-result-table.phase2 thead th {
+      opacity: 0;
+    }
+
+    .sql-result-table.phase1 tbody tr,
+    .sql-result-table.phase2 tbody tr,
+    .sql-result-table.phase3 tbody tr {
+      opacity: 0;
+    }
+
+    .sql-result-table.phase2 thead th {
+      animation: thSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .sql-result-table.phase3 tbody tr {
+      animation: rowFadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* nth-child stagger for rows */
+    .sql-result-table.phase3 tbody tr:nth-child(1) {
+      animation-delay: 0.00s;
+    }
+
+    .sql-result-table.phase3 tbody tr:nth-child(2) {
+      animation-delay: 0.07s;
+    }
+
+    .sql-result-table.phase3 tbody tr:nth-child(3) {
+      animation-delay: 0.14s;
+    }
+
+    .sql-result-table.phase3 tbody tr:nth-child(4) {
+      animation-delay: 0.21s;
+    }
+
+    .sql-result-table.phase3 tbody tr:nth-child(5) {
+      animation-delay: 0.28s;
+    }
+
+    .sql-result-table.phase3 tbody tr:nth-child(6) {
+      animation-delay: 0.35s;
+    }
+
+    /* nth-child stagger for headers */
+    .sql-result-table.phase2 thead th:nth-child(1) {
+      animation-delay: 0.00s;
+    }
+
+    .sql-result-table.phase2 thead th:nth-child(2) {
+      animation-delay: 0.06s;
+    }
+
+    .sql-result-table.phase2 thead th:nth-child(3) {
+      animation-delay: 0.12s;
+    }
+
+    .sql-result-table.phase2 thead th:nth-child(4) {
+      animation-delay: 0.18s;
+    }
+
+    .sql-result-table.phase2 thead th:nth-child(5) {
+      animation-delay: 0.24s;
+    }
+
+    .sql-result-table.phase2 thead th:nth-child(6) {
+      animation-delay: 0.30s;
+    }
+
+    /* Callout hidden until after phase 3 */
+    .run-callout {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .run-callout.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Light theme adjustments for run button */
+    html:not(.dark) .sql-run-btn {
+      color: #006600;
+      background: rgba(0, 100, 0, 0.06);
+      border-color: rgba(0, 100, 0, 0.2);
+    }
+
+    html:not(.dark) .sql-run-btn:hover {
+      background: rgba(0, 100, 0, 0.12);
+      border-color: rgba(0, 100, 0, 0.4);
+      box-shadow: 0 0 12px rgba(0, 100, 0, 0.15);
+    }
+
+    html:not(.dark) .sql-run-btn.running {
+      color: #996600;
+      border-color: rgba(150, 100, 0, 0.4);
+      background: rgba(150, 100, 0, 0.08);
+    }
+  </style>
+
+</head>
+
+<body class="loading">
+
+  <!-- Loading Screen Overlay -->
+  <div id="loading-screen">
+    <div class="loader-card">
+      <div class="loader">
+        <p>Analyzing</p>
+        <div class="words">
+          <span class="word">sessions</span>
+          <span class="word">analytics</span>
+          <span class="word">datasets</span>
+          <span class="word">normalization</span>
+          <span class="word">sessions</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theme Toggler -->
+  <button id="animated-theme-toggler" class="theme-toggler" aria-label="Toggle theme">
+    <span id="toggler-icon-container"></span>
+    <span class="sr-only">Toggle theme</span>
+  </button>
+
+  <!-- Side nav dots -->
+  <nav class="nav" id="nav"></nav>
+
+  <div class="hint">↑ ↓ or ← → to navigate</div>
+
+  <!-- ============================================================ -->
+  <!-- 1. COVER                                                      -->
+  <!-- ============================================================ -->
+  <section class="slide cover" data-section="Cover">
+    <div class="bg-grid"></div>
+    <div class="cover-content">
+      <p class="eyebrow">CSE 204: Database Systems: Group 16</p>
+      <h1 class="morphing-text" data-texts='["Visitor\nAnalytics", "E-Commerce\nBehavior"]'></h1>
+      <p class="sub">A Normalized Database for Online Shopper Behavior</p>
+      <p class="meta">Instructor: <strong>Joseph William Ledet</strong></p>
+      <p class="meta" style="margin-top:8px">Spring 2026</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 2. OUR TEAM                                                   -->
+  <!-- ============================================================ -->
+  <section class="slide team-section" data-section="Team">
+    <div class="team-bg-text">GROUP 16</div>
+    <div style="position:relative; z-index:2;">
+      <h2 style="font-size: 72px; letter-spacing: -0.04em; margin-bottom: 16px;">Our Team</h2>
+    </div>
+    <div
+      style="display: flex; flex-wrap: wrap; gap: 48px 72px; margin-top: 64px; position:relative; z-index:2; justify-content: center;">
+      <div class="team-card">
+        <div class="avatar"
+          style="background-image: url('yusuf.png'); background-size: cover; background-position: center top; color: transparent;">
+        </div>
+        <div class="info">
+          <div class="name">Yusuf Kalkan</div>
+          <div class="role">Crisis Management</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar"
+          style="background-image: url('demirhan.png'); background-size: cover; background-position: center top; color: transparent;">
+        </div>
+        <div class="info">
+          <div class="name">Demirhan Uray</div>
+          <div class="role">Silent Strength</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar"
+          style="background-image: url('cem.png'); background-size: cover; background-position: center top; color: transparent;">
+        </div>
+        <div class="info">
+          <div class="name">Cem Karakale</div>
+          <div class="role">Voiceover & Moral Support</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar"
+          style="background-image: url('halila.png'); background-size: cover; background-position: center top; color: transparent;">
+        </div>
+        <div class="info">
+          <div class="name">Halil Emre Ünal</div>
+          <div class="role">Profesyonel Procrastinator</div>
+        </div>
+      </div>
+      <div class="team-card">
+        <div class="avatar"
+          style="background-image: url('caglar.jpeg'); background-size: cover; background-position: center top; color: transparent;">
+        </div>
+        <div class="info">
+          <div class="name">Celal Çağlar Okuducu</div>
+          <div class="role">Slide Architect</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 3. INTRODUCTION                                               -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Introduction">
+    <h2>Introduction</h2>
+    <div class="two-col" style="margin-top: 10px;">
+      <div class="stack">
+        <h3>Introduction</h3>
+        <p style="line-height: 1.6; font-size: 0.95em;">
+          This project transforms a massive, unmanageable CSV dataset into a secure and efficient SQL-based relational
+          database.<br><br>
+          By centralizing web sessions and purchase records, we eliminate data anomalies and ensure real-time accuracy
+          to power reliable business analytics.
+        </p>
+      </div>
+      <div class="stack">
+        <h3>Objectives</h3>
+        <ul style="padding-left: 20px; line-height: 1.6; font-size: 0.95em;">
+          <li style="margin-bottom: 12px;"><strong>Streamline Analytics:</strong> Build a secure database to easily
+            track user journeys from first visit to final checkout.</li>
+          <li><strong>Ensure Data Quality:</strong> Create a scalable, 3NF-compliant relational model to cleanly manage
+            complex customer and transaction data.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 4. OBJECTIVES                                                 -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Objectives">
+    <h2>Objectives</h2>
+    <div class="two-col" style="margin-top: 10px;">
+      <div class="stack">
+        <h3>Client's Ask</h3>
+        <div class="card">
+          <h4>Understand the customer</h4>
+          <p><span class="highlighter" data-action="underline" data-color="#000000">Who is buying</span>, by country,
+            age group, language, device?</p>
+        </div>
+        <div class="card">
+          <h4>Audit site performance</h4>
+          <p>Are certain devices or browsers hurting conversion?</p>
+        </div>
+        <div class="card">
+          <h4>Evaluate timing &amp; marketing</h4>
+          <p>Which months, weekends, and traffic sources actually pay off?</p>
+        </div>
+        <div class="card">
+          <h4>Drive strategy</h4>
+          <p>Give management evidence-based answers, not guesses.</p>
+        </div>
+      </div>
+      <div class="stack">
+        <h3>Our Goal</h3>
+        <div class="card alt">
+          <h4>Model the data properly</h4>
+          <p>Eliminate redundancy and anomalies by normalizing to 3NF.</p>
+        </div>
+        <div class="card alt">
+          <p>Explicit entities, keys, and relationships are fully documented.</p>
+        </div>
+        <div class="card alt">
+          <h4>Deliver a query library</h4>
+          <p>SQL that answers each client question on the new schema.</p>
+        </div>
+        <div class="card alt">
+          <h4>Tell the story</h4>
+          <p>Turn raw tables into a business narrative the client can act on.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 5. VALUE                                                      -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Value">
+    <h2>What We Deliver</h2>
+    <div class="three-col" style="margin-top: 10px;">
+      <div class="card">
+        <p>12 tables with proper keys and FKs to eliminate update anomalies and redundant rows.</p>
+      </div>
+      <div class="card alt">
+        <h4>Reusable SQL Library</h4>
+        <p>5 business-facing queries covering time, visitor, device, country, and buyer profile.</p>
+      </div>
+      <div class="card good">
+        <p>Key findings: peak month, most profitable channel, device UX issues, and under-served segments.</p>
+      </div>
+    </div>
+    <div class="callout good">
+      <strong>Bottom line:</strong> the client moves from a single unmaintainable CSV to a
+      documented, query-ready database that tells them <em>who</em> buys, <em>when</em>,
+      and <em>how they arrived</em>, so marketing and product budgets can be reallocated with evidence.
+    </div>
+  </section>
+
+
+  <!-- ============================================================ -->
+  <!-- 6. DATASET                                                    -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Dataset">
+    <h2>The Dataset at a Glance</h2>
+    <div class="three-col" style="margin: 40px 0;">
+      <div class="stat"><span class="n"><span class="number-ticker" data-value="12330">0</span></span><span
+          class="l">Sessions</span></div>
+      <div class="stat"><span class="n"><span class="number-ticker" data-value="35">0</span></span><span
+          class="l">Columns (UNF)</span></div>
+      <div class="stat"><span class="n">~<span class="number-ticker" data-value="15">0</span>%</span><span
+          class="l">Conversion Rate</span></div>
+    </div>
+    <p>Each row = a single session (one continuous visit to the store).</p>
+    <div class="callout">
+      The raw CSV covers four dimensions:
+      <strong>who</strong> (Country, Age_Group, Language, VisitorType),
+      <strong>how they arrived</strong> (Device, Browser, OS, TrafficType),
+      <strong>what they did</strong> (page counts, durations, BounceRate, ExitRate), and
+      <strong>outcome</strong> (Revenue).
+    </div>
+    <p class="tiny" style="margin-top: 24px;">Source: UCI Online Shoppers Purchasing Intention (extended variant used
+      for this project).</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 7. UNF TABLE                                                  -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="UNF">
+    <h2>UNF: The Raw Flat Table</h2>
+    <p class="small">One table, 35 columns. Same information repeated across thousands of rows.</p>
+    <div class="table-wrap unf-marquee">
+      <table>
+        <thead>
+          <tr>
+            <th>Session_ID</th>
+            <th>Visitor_ID</th>
+            <th>VisitorType</th>
+            <th>Country</th>
+            <th>Region</th>
+            <th>Language</th>
+            <th>Age_Group</th>
+            <th>Gender</th>
+            <th>DeviceType</th>
+            <th>OS</th>
+            <th>Browser</th>
+            <th>Browser_Ver</th>
+            <th>TrafficType</th>
+            <th>Month</th>
+            <th>Quarter</th>
+            <th>Weekend</th>
+            <th>SpecialDay</th>
+            <th>Holiday</th>
+            <th class="num">Admin_Cnt</th>
+            <th class="num">Admin_Dur</th>
+            <th class="num">Info_Cnt</th>
+            <th class="num">Info_Dur</th>
+            <th class="num">Prod_Cnt</th>
+            <th class="num">Prod_Dur</th>
+            <th class="num">BounceRate</th>
+            <th class="num">ExitRate</th>
+            <th class="num">PageValue</th>
+            <th class="num">EngageScore</th>
+            <th>Prev_Purch</th>
+            <th>TotalSpend</th>
+            <th>Coupon</th>
+            <th>Source</th>
+            <th>Campaign</th>
+            <th>LastClick</th>
+            <th>Revenue</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>5553</td>
+            <td><span style="color: #FF9800; font-weight: bold;">V-102</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Returning</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Ireland</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">9</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Spanish</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">25-34</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">F</span></td>
+            <td>Desktop</td>
+            <td>2</td>
+            <td>1</td>
+            <td>114.0</td>
+            <td>2</td>
+            <td>Jul</td>
+            <td>3</td>
+            <td>0</td>
+            <td>0.0</td>
+            <td>0</td>
+            <td class="num">2</td>
+            <td class="num">41.0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">35</td>
+            <td class="num">682.1</td>
+            <td class="num">0.00</td>
+            <td class="num">0.02</td>
+            <td class="num">0.0</td>
+            <td class="num">0.45</td>
+            <td>2</td>
+            <td>120.50</td>
+            <td>No</td>
+            <td>Google</td>
+            <td>Summer_Sale</td>
+            <td>Prod_Page</td>
+            <td>0</td>
+          </tr>
+          <!-- Duplicate Visitor Row to demonstrate redundancy -->
+          <tr>
+            <td>5554</td>
+            <td><span style="color: #FF9800; font-weight: bold;">V-102</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Returning</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Ireland</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">9</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">Spanish</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">25-34</span></td>
+            <td><span style="color: #FF9800; font-weight: bold;">F</span></td>
+            <td>Mobile</td>
+            <td>3</td>
+            <td>1</td>
+            <td>114.0</td>
+            <td>2</td>
+            <td>Aug</td>
+            <td>3</td>
+            <td>1</td>
+            <td>0.0</td>
+            <td>0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">12</td>
+            <td class="num">150.0</td>
+            <td class="num">0.01</td>
+            <td class="num">0.03</td>
+            <td class="num">0.0</td>
+            <td class="num">0.30</td>
+            <td>3</td>
+            <td>45.00</td>
+            <td>No</td>
+            <td>Direct</td>
+            <td>None</td>
+            <td>Cart</td>
+            <td>1</td>
+          </tr>
+          <tr>
+            <td>1384</td>
+            <td>V-550</td>
+            <td>Returning</td>
+            <td>Australia</td>
+            <td>1</td>
+            <td>Turkish</td>
+            <td>45-54</td>
+            <td>M</td>
+            <td>Mobile</td>
+            <td>1</td>
+            <td>2</td>
+            <td>15.2</td>
+            <td>3</td>
+            <td>Mar</td>
+            <td>1</td>
+            <td>1</td>
+            <td>0.0</td>
+            <td>0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">1</td>
+            <td class="num">12.5</td>
+            <td class="num">34</td>
+            <td class="num">311.5</td>
+            <td class="num">0.01</td>
+            <td class="num">0.04</td>
+            <td class="num">0.0</td>
+            <td class="num">0.22</td>
+            <td>0</td>
+            <td>0.00</td>
+            <td>No</td>
+            <td>Direct</td>
+            <td>None</td>
+            <td>Info_Page</td>
+            <td>0</td>
+          </tr>
+          <!-- Messy Row 1 -->
+          <tr>
+            <td>7777</td>
+            <td>V-888</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">New, Returning</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">USA, Canada</span></td>
+            <td>3</td>
+            <td>English</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">18-24, 25-34</span></td>
+            <td>M</td>
+            <td>Desktop</td>
+            <td>1</td>
+            <td>1</td>
+            <td>115.0</td>
+            <td>1</td>
+            <td>Nov</td>
+            <td>4</td>
+            <td>1</td>
+            <td>0.0</td>
+            <td>0</td>
+            <td class="num">1</td>
+            <td class="num">12.0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">5</td>
+            <td class="num">120.0</td>
+            <td class="num">0.00</td>
+            <td class="num">0.01</td>
+            <td class="num">15.5</td>
+            <td class="num">0.80</td>
+            <td>0</td>
+            <td>45.00</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Yes, No</span></td>
+            <td>Google</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">BlackFriday, Welcome</span></td>
+            <td>Checkout</td>
+            <td>1</td>
+          </tr>
+          <!-- Messy Row 2 -->
+          <tr>
+            <td>8888</td>
+            <td>V-999</td>
+            <td>Returning</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Turkey, Germany</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">6, 12</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Turkish, English, German</span></td>
+            <td>35-44</td>
+            <td>F</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Mobile, Tablet</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">3, 8</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Chrome, Edge</span></td>
+            <td>120.5</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">4, 7</span></td>
+            <td>Dec</td>
+            <td>4</td>
+            <td>1</td>
+            <td>0.5</td>
+            <td>1</td>
+            <td class="num">4</td>
+            <td class="num">88.0</td>
+            <td class="num">2</td>
+            <td class="num">25.0</td>
+            <td class="num">12</td>
+            <td class="num">450.0</td>
+            <td class="num">0.02</td>
+            <td class="num">0.05</td>
+            <td class="num">10.0</td>
+            <td class="num">0.60</td>
+            <td>5</td>
+            <td>250.00</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">WINTER20, FREESHIP</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Instagram, YouTube</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Holiday_Sale, Influencer_Promo</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">ProdPage, Cart</span></td>
+            <td>1</td>
+          </tr>
+          <!-- Messy Row 3 -->
+          <tr>
+            <td>9999</td>
+            <td>V-111</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Guest, Registered</span></td>
+            <td>France</td>
+            <td>4</td>
+            <td>French</td>
+            <td>25-34</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">M, F, Other</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Laptop, SmartTV</span></td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">MacOS, Android</span></td>
+            <td>Safari</td>
+            <td>17.1</td>
+            <td>2</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">May, June</span></td>
+            <td>2</td>
+            <td>0</td>
+            <td>0.0</td>
+            <td>0</td>
+            <td class="num">1</td>
+            <td class="num">15.0</td>
+            <td class="num">0</td>
+            <td class="num">0.0</td>
+            <td class="num">8</td>
+            <td class="num">210.0</td>
+            <td class="num">0.01</td>
+            <td class="num">0.03</td>
+            <td class="num">0.0</td>
+            <td class="num">0.40</td>
+            <td>1</td>
+            <td>55.00</td>
+            <td>No</td>
+            <td>Direct</td>
+            <td>None</td>
+            <td><span style="color: #ff4d4d; font-weight: bold;">Search, Category, Checkout</span></td>
+            <td>0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tiny">(Raw UNF table: All 35 columns shown. Notice how every session repeats visitor data, hardware info,
+      and temporal context.)</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 8. UNF ANOMALIES                                              -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="UNF Problems">
+    <h2>Why UNF is a <span class="highlighter" data-action="circle" data-color="#ff4d4d" data-padding="6">Problem</span>
+    </h2>
+    <div class="two-col" style="margin-top: 10px;">
+      <div class="stack">
+        <h3 style="color: var(--bad);">Anomalies</h3>
+        <div class="card bad">
+          <h4><span class="badge bad">Insert</span></h4>
+          <p>Can't store a new visitor without also creating a session for them.</p>
+        </div>
+        <div class="card bad">
+          <h4><span class="badge bad">Update</span></h4>
+          <p>Renaming a country requires updating thousands of rows and risks inconsistency.</p>
+        </div>
+        <div class="card bad">
+          <h4><span class="badge bad">Delete</span></h4>
+          <p>Deleting the last session from a country also erases the country itself.</p>
+        </div>
+      </div>
+      <div class="stack">
+        <h3 style="color: var(--bad);">Redundancy &amp; Dependencies</h3>
+        <div class="card bad">
+          <h4>Non-atomic values</h4>
+          <p>Multiple values crammed into one cell (e.g., <em>Campaign</em> = "BlackFriday, Welcome").</p>
+        </div>
+        <div class="card bad">
+          <h4>Repeating groups</h4>
+          <p>Three sub-groups per session: Administrative / Informational / ProductRelated (count + duration).</p>
+        </div>
+        <div class="card bad">
+          <h4>Transitive dependencies</h4>
+          <p><em>Month → Quarter</em>, <em>Browser_ID → BrowserVersion</em>, <em>Country → Region</em>.</p>
+        </div>
+        <div class="card bad">
+          <h4>Visitor duplication</h4>
+          <p>Country, Age_Group, AccountCreated repeated on every session row.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 9. 1NF                                                        -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="1NF">
+    <h2>1NF: Atomic Values, No Repeating Groups</h2>
+    <div class="two-col" style="align-items: flex-start;">
+      <div>
+        <ul style="margin-bottom: 12px; font-size: 14px;">
+          <li>Every cell holds <em>one</em> atomic value</li>
+          <li>Repeating groups → separate <strong>PAGE_ACTIVITY</strong> table</li>
+          <li>Every row uniquely identified by a key</li>
+        </ul>
+        <pre class="sql">-- SESSION_1NF: repeating groups removed
+CREATE TABLE SESSION_1NF (
+    Session_Id  INT PRIMARY KEY,
+    VisitorType VARCHAR(50), Country VARCHAR(50),
+    Language    VARCHAR(50), DeviceType VARCHAR(50),
+    Browser_ID  INT, Month   VARCHAR(20),
+    Quarter     INT,  Revenue TINYINT, ...
+);
+
+-- PAGE_ACTIVITY_1NF: unpivoted from UNF
+CREATE TABLE PAGE_ACTIVITY_1NF (
+    Session_Id    INT NOT NULL,
+    Page_Category VARCHAR(50) NOT NULL, -- 'Administrative'|'Informational'|'ProductRelated'
+    Page_Count    INT, Duration DOUBLE,
+    PRIMARY KEY (Session_Id, Page_Category),
+    FOREIGN KEY (Session_Id) REFERENCES SESSION_1NF(Session_Id)
+);
+
+INSERT INTO PAGE_ACTIVITY_1NF
+SELECT Session_Id, 'Administrative', Administrative, Administrative_Duration FROM UNF
+UNION ALL
+SELECT Session_Id, 'Informational',  Informational,  Informational_Duration FROM UNF
+UNION ALL
+SELECT Session_Id, 'ProductRelated', ProductRelated, ProductRelated_Duration FROM UNF;</pre>
+      </div>
+      <div>
+        <div class="er-grid" style="grid-template-columns: 1fr 1fr;">
+          <div class="entity core">
+            <header>SESSION_1NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">VisitorType</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Region</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Language</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Age_Group</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">DeviceType</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">OS</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Browser</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">bool</span> <span class="n">Weekend</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">float</span> <span class="n">BounceRate</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">ExitRate</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">PageValue</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">EngageScore</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">bool</span> <span class="n">Revenue</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">...</span> <span class="n"> (Total 29)</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity">
+            <header>PAGE_ACTIVITY_1NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k">PK/FK</span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Page_Category</span> <span
+                  class="k">PK</span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Page_Count</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">Duration</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rel-list">
+          <div class="rel"><b>SESSION_1NF</b> 1 to N <b>PAGE_ACTIVITY_1NF</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 9.1. 1NF DATA                                                 -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="1NF Data">
+    <h2>1NF in Action</h2>
+    <p class="small">Notice how the non-atomic row is split and repeating page metrics are moved to
+      <strong>PAGE_ACTIVITY_1NF</strong>.
+    </p>
+
+    <div class="two-col" style="margin-top: 10px; gap: 20px;">
+      <div class="stack">
+        <h3>SESSION_1NF (Selected Columns)</h3>
+        <div class="table-wrap">
+          <table style="font-size: 14px;">
+            <thead>
+              <tr>
+                <th>Session_ID</th>
+                <th>Visitor_ID</th>
+                <th>Country</th>
+                <th>Campaign</th>
+                <th>...</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>5553</td>
+                <td>V-102</td>
+                <td>Ireland</td>
+                <td>Summer_Sale</td>
+                <td>...</td>
+              </tr>
+              <tr>
+                <td>5554</td>
+                <td>V-102</td>
+                <td>Ireland</td>
+                <td>None</td>
+                <td>...</td>
+              </tr>
+              <tr>
+                <td>1384</td>
+                <td>V-550</td>
+                <td>Australia</td>
+                <td>None</td>
+                <td>...</td>
+              </tr>
+              <tr>
+                <td><span style="color: #4CAF50; font-weight: bold;">7777</span></td>
+                <td>V-888</td>
+                <td>USA</td>
+                <td><span style="color: #4CAF50; font-weight: bold;">BlackFriday</span></td>
+                <td>...</td>
+              </tr>
+              <tr>
+                <td><span style="color: #4CAF50; font-weight: bold;">7777</span></td>
+                <td>V-888</td>
+                <td>USA</td>
+                <td><span style="color: #4CAF50; font-weight: bold;">Welcome</span></td>
+                <td>...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="stack">
+        <h3>PAGE_ACTIVITY_1NF</h3>
+        <div class="table-wrap">
+          <table style="font-size: 14px;">
+            <thead>
+              <tr>
+                <th>Session_ID</th>
+                <th>Page_Category</th>
+                <th class="num">Page_Count</th>
+                <th class="num">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>5553</td>
+                <td>Administrative</td>
+                <td class="num">2</td>
+                <td class="num">41.0</td>
+              </tr>
+              <tr>
+                <td>5553</td>
+                <td>Informational</td>
+                <td class="num">0</td>
+                <td class="num">0.0</td>
+              </tr>
+              <tr>
+                <td>5553</td>
+                <td>ProductRelated</td>
+                <td class="num">35</td>
+                <td class="num">682.1</td>
+              </tr>
+              <tr>
+                <td>5554</td>
+                <td>ProductRelated</td>
+                <td class="num">12</td>
+                <td class="num">150.0</td>
+              </tr>
+              <tr>
+                <td>1384</td>
+                <td>Administrative</td>
+                <td class="num">0</td>
+                <td class="num">0.0</td>
+              </tr>
+              <tr>
+                <td>...</td>
+                <td>...</td>
+                <td class="num">...</td>
+                <td class="num">...</td>
+              </tr>
+              <tr>
+                <td>7777</td>
+                <td>Administrative</td>
+                <td class="num">1</td>
+                <td class="num">12.0</td>
+              </tr>
+              <tr>
+                <td>7777</td>
+                <td>ProductRelated</td>
+                <td class="num">5</td>
+                <td class="num">120.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 10. 2NF                                                       -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="2NF">
+    <h2>2NF: Remove Partial Dependencies</h2>
+    <div class="two-col" style="align-items: flex-start;">
+      <div>
+        <ul style="margin-bottom: 12px; font-size: 14px;">
+          <li>Every non-key attribute must depend on the <span class="highlighter" data-action="highlight"
+              data-color="#ffe066" data-padding="4"><em>whole</em> key</span></li>
+          <li>Visitor attributes → new <strong>VISITOR</strong> table</li>
+          <li>SESSION uses FK references instead of copying data</li>
+        </ul>
+        <pre class="sql">-- VISITOR_2NF: visitor attributes extracted
+CREATE TABLE VISITOR_2NF (
+    Visitor_ID     INT AUTO_INCREMENT PRIMARY KEY,
+    VisitorType    VARCHAR(50), Country VARCHAR(100),
+    Age_Group      VARCHAR(20), Language VARCHAR(30),
+    AccountCreated DATE, LastSeen DATETIME
+);
+
+-- SYSTEM_CONFIG_2NF: device/browser extracted
+CREATE TABLE SYSTEM_CONFIG_2NF (
+    Config_ID INT PRIMARY KEY, OperatingSystems INT,
+    Browser INT, BrowserVersion VARCHAR(30),
+    DeviceType VARCHAR(20), ScreenResolution VARCHAR(20),
+    JavaEnabled BOOLEAN
+);
+
+-- TIME_CONTEXT_2NF: temporal data extracted
+CREATE TABLE TIME_CONTEXT_2NF (
+    Time_ID INT PRIMARY KEY, Month VARCHAR(20),
+    SpecialDay DOUBLE, Weekend BOOLEAN,
+    HourOfDay INT, Quarter INT, IsHoliday BOOLEAN
+);
+
+-- SESSION_2NF: FKs replace copied columns
+CREATE TABLE SESSION_2NF (
+    Session_ID INT PRIMARY KEY,
+    Visitor_ID INT, Config_ID INT, Time_ID INT,
+    TrafficType INT, Revenue BOOLEAN,
+    SessionDuration DOUBLE,
+    FOREIGN KEY (Visitor_ID) REFERENCES VISITOR_2NF,
+    FOREIGN KEY (Config_ID)  REFERENCES SYSTEM_CONFIG_2NF,
+    FOREIGN KEY (Time_ID)    REFERENCES TIME_CONTEXT_2NF
+);</pre>
+      </div>
+      <div>
+        <div class="er-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="entity core">
+            <header>VISITOR_2NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">VisitorType</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Region</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Age_Group</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Language</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>SYSTEM_CONFIG_2NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">OS</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Browser</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Browser_Ver</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">DeviceType</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>TIME_CONTEXT_2NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Quarter</span> <span class="k"></span></div>
+              <div class="attr"><span class="t">bool</span> <span class="n">IsHoliday</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>SESSION_2NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">TrafficType</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">bool</span> <span class="n">Revenue</span> <span class="k"></span></div>
+            </div>
+          </div>
+          <div class="entity">
+            <header>ANALYTICS_MET_2NF</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Metric_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">float</span> <span class="n">BounceRates</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">ExitRates</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity">
+            <header>PAGE_ACTIVITY</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k">PK/FK</span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Page_Category</span> <span
+                  class="k">PK</span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Page_Count</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">float</span> <span class="n">Duration</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="rel-list">
+          <div class="rel"><b>VISITOR_2NF</b> 1 to N <b>SESSION_2NF</b></div>
+          <div class="rel"><b>SYS_CONFIG_2NF</b> 1 to N <b>SESSION_2NF</b></div>
+          <div class="rel"><b>TIME_CONTEXT_2NF</b> 1 to N <b>SESSION_2NF</b></div>
+          <div class="rel"><b>SESSION_2NF</b> 1 to N <b>PAGE_ACTIVITY</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 11. 3NF OVERVIEW                                              -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="3NF">
+    <p class="eyebrow">Normalization: Step 3</p>
+    <h2>3NF: Transitive Dependencies</h2>
+    <div class="two-col" style="grid-template-columns: 1.15fr 0.85fr; gap: 20px; align-items: flex-start;">
+      <div>
+        <ul style="margin-bottom: 6px; font-size: 13px;">
+          <li>No non-key attribute depends on another non-key attribute</li>
+          <li><strong>Month → Quarter</strong>, <strong>Browser → Version</strong>, <strong>Country → Region</strong>
+          </li>
+        </ul>
+        <pre class="sql" style="font-size: 9px; line-height: 1.25; padding: 6px 10px;">-- 3NF: Extract transitive dependencies
+
+-- MONTH_INFO: Month → Quarter
+CREATE TABLE MONTH_INFO (
+    Month VARCHAR(20) PRIMARY KEY, Quarter INT
+);
+
+-- BROWSER_INFO: Browser_ID → BrowserVersion
+CREATE TABLE BROWSER_INFO (
+    Browser_ID INT PRIMARY KEY, BrowserVersion VARCHAR(30)
+);
+
+-- COUNTRY_REGION: Country → Region_ID
+CREATE TABLE COUNTRY_REGION (
+    Country VARCHAR(100) PRIMARY KEY, Region_ID INT
+);
+
+-- VISITOR: Region removed, Country → FK
+CREATE TABLE VISITOR (
+    Visitor_ID INT PRIMARY KEY, VisitorType VARCHAR(50),
+    Country VARCHAR(100), Age_Group VARCHAR(20),
+    Language VARCHAR(30), AccountCreated DATE,
+    FOREIGN KEY (Country) REFERENCES COUNTRY_REGION
+);
+
+-- SYSTEM_CONFIG: BrowserVersion removed, Browser_ID → FK
+CREATE TABLE SYSTEM_CONFIG (
+    Config_ID INT PRIMARY KEY, OperatingSystems INT,
+    Browser_ID INT, DeviceType VARCHAR(20),
+    ScreenResolution VARCHAR(20), JavaEnabled BOOLEAN,
+    FOREIGN KEY (Browser_ID) REFERENCES BROWSER_INFO
+);
+
+-- TIME_CONTEXT: Quarter removed, Month → FK
+CREATE TABLE TIME_CONTEXT (
+    Time_ID INT PRIMARY KEY, Month VARCHAR(20),
+    SpecialDay DOUBLE, Weekend BOOLEAN, HourOfDay INT,
+    IsHoliday BOOLEAN, FOREIGN KEY (Month) REFERENCES MONTH_INFO
+);
+
+-- SESSION: final 3NF fact table
+CREATE TABLE SESSION (
+    Session_ID INT PRIMARY KEY, Visitor_ID INT,
+    Config_ID INT, Time_ID INT, TrafficType INT,
+    Revenue BOOLEAN, SessionDuration DOUBLE,
+    FOREIGN KEY (Visitor_ID) REFERENCES VISITOR,
+    FOREIGN KEY (Config_ID)  REFERENCES SYSTEM_CONFIG,
+    FOREIGN KEY (Time_ID)    REFERENCES TIME_CONTEXT
+);</pre>
+      </div>
+      <div style="transform: scale(0.92); transform-origin: top right;">
+        <div class="callout good" style="font-size: 12px; padding: 8px 12px; margin-top: 0;">
+          Result: <strong>12 tables</strong>, each in 3NF.
+        </div>
+        <div class="er-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px;">
+          <div class="entity lookup">
+            <header>COUNTRY_REG</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Region_ID</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity lookup">
+            <header>BROWSER_INFO</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Browser_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">BrowserVer</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity lookup">
+            <header>MONTH_INFO</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Quarter</span> <span class="k"></span></div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>VISITOR</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">VisitorType</span><span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>SYS_CONFIG</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Browser_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">DeviceType</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>TIME_CONTEXT</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">bool</span> <span class="n">Weekend</span> <span class="k"></span></div>
+            </div>
+          </div>
+          <div class="entity core">
+            <header>SESSION</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">bool</span> <span class="n">Revenue</span> <span class="k"></span></div>
+            </div>
+          </div>
+          <div class="entity bridge">
+            <header>PAGE_ACTIVITY</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">string</span> <span class="n">Category</span> <span class="k"></span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Count</span> <span class="k"></span></div>
+            </div>
+          </div>
+          <div class="entity">
+            <header>ANALYTICS</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Metric_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">float</span> <span class="n">BounceRate</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity">
+            <header>PAGE</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Page_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">string</span> <span class="n">Page_URL</span> <span class="k"></span>
+              </div>
+            </div>
+          </div>
+          <div class="entity bridge">
+            <header>PAGE_VISIT</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Visit_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span
+                  class="k fk">FK</span></div>
+              <div class="attr"><span class="t">int</span> <span class="n">Page_ID</span> <span class="k fk">FK</span>
+              </div>
+            </div>
+          </div>
+          <div class="entity bridge">
+            <header>SUGGESTION</header>
+            <div class="attrs">
+              <div class="attr"><span class="t">int</span> <span class="n">Sugg_ID</span> <span class="k">PK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">From_Vis</span> <span class="k fk">FK</span>
+              </div>
+              <div class="attr"><span class="t">int</span> <span class="n">To_Vis</span> <span class="k fk">FK</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- ============================================================ -->
+  <!-- 12. ER DIAGRAM — SVG                                          -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="ER Diagram" style="padding:100px 48px 24px; justify-content:flex-start;">
+
+    <p class="eyebrow" style="margin-bottom:4px;">3NF: 11 Entities, <span style="color:var(--accent)">■</span> PK
+      , <span style="color:var(--accent-2)">■</span> FK</p>
+    <h2 style="margin-bottom:10px;">ER Diagram</h2>
+    <div
+      style="flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; position: relative; margin-top: 10px;">
+      <!-- Ambient Light Glow -->
+      <div
+        style="position: absolute; width: 70%; height: 70%; background: var(--ambient); filter: blur(80px); border-radius: 50%; pointer-events: none;">
+      </div>
+      <img id="er-diagram-img" src="black.png" alt="ER Diagram"
+        style="max-width: 100%; max-height: 100%; object-fit: contain; z-index: 1; border-radius: 4px; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.1));">
+    </div>
+
+
+  </section>
+
+  <!-- DEAD HTML (replaced by SVG) — keeping for reference only -->
+  <div style="display:none">
+    <div class="er-grid">
+
+      <div class="entity core">
+        <header>VISITOR</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">VisitorType</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">Age_Group</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">Language</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">date</span> <span class="n">AccountCreated</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">dt</span> <span class="n">LastSeen</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity core">
+        <header>SESSION</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Visitor_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k fk">FK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">TrafficType</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">bool</span> <span class="n">Revenue</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">float</span><span class="n">SessionDuration</span><span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">SuggestedBy</span> <span class="k fk">FK</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity core">
+        <header>ANALYTICS_METRICS</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Metric_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">BounceRates</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">ExitRates</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">float</span> <span class="n">PageValues</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">float</span> <span class="n">ConversionRate</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">EngagementScore</span> <span class="k"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity bridge">
+        <header>PAGE_ACTIVITY</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Activity_ID</span> <span class="k">PK</span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">Page_Category</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Page_Count</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">float</span> <span class="n">Duration</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity bridge">
+        <header>PAGE_VISIT</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Visit_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Session_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Page_ID</span> <span class="k fk">FK</span></div>
+          <div class="attr"><span class="t">dt</span> <span class="n">VisitTimestamp</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">TimeOnPage</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">ScrollDepth</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity core">
+        <header>PAGE</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Page_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">Page_URL</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">Page_Title</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">Page_Category</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">LoadTime_Avg</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">date</span> <span class="n">DatePublished</span> <span class="k"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="entity bridge">
+        <header>SUGGESTION</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Suggestion_ID</span> <span class="k">PK</span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Suggester_Visitor</span><span
+              class="k fk">FK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Receiver_Visitor</span> <span
+              class="k fk">FK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Page_ID</span> <span class="k fk">FK</span></div>
+          <div class="attr"><span class="t">dt</span> <span class="n">Suggestion_Date</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">bool</span> <span class="n">Was_Visited</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity lookup">
+        <header>SYSTEM_CONFIG</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Config_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">OperatingSystems</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">int</span> <span class="n">Browser_ID</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">DeviceType</span> <span class="k"></span>
+          </div>
+          <div class="attr"><span class="t">string</span> <span class="n">ScreenResolution</span> <span
+              class="k"></span></div>
+          <div class="attr"><span class="t">bool</span> <span class="n">JavaEnabled</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity lookup">
+        <header>TIME_CONTEXT</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Time_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k fk">FK</span>
+          </div>
+          <div class="attr"><span class="t">float</span> <span class="n">SpecialDay</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">bool</span> <span class="n">Weekend</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">HourOfDay</span> <span class="k"></span></div>
+          <div class="attr"><span class="t">bool</span> <span class="n">IsHoliday</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity lookup">
+        <header>COUNTRY_REGION</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">string</span> <span class="n">Country</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Region_ID</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity lookup">
+        <header>MONTH_INFO</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">string</span> <span class="n">Month</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">int</span> <span class="n">Quarter</span> <span class="k"></span></div>
+        </div>
+      </div>
+
+      <div class="entity lookup">
+        <header>BROWSER_INFO</header>
+        <div class="attrs">
+          <div class="attr"><span class="t">int</span> <span class="n">Browser_ID</span> <span class="k">PK</span></div>
+          <div class="attr"><span class="t">string</span> <span class="n">BrowserVersion</span> <span class="k"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- end dead HTML -->
+
+  <!-- ============================================================ -->
+  <!-- 13. CAPABILITIES                                              -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Capabilities">
+    <h2>Capabilities: What Does This Architecture Actually Do?</h2>
+    <p class="small">We will walk you through five specific UI capabilities mapped directly to your expanded scope
+      requests.</p>
+    <ol style="font-size: 17px; line-height: 2.1; padding-left: 28px; margin-top: 14px;">
+      <li><strong>Visitor Browser Matrix</strong> (Analytics &amp; Reporting)</li>
+      <li><strong>Unique Monthly Visitors</strong> (Seasonality)</li>
+      <li><strong>Relational Region Updates</strong> (Operations)</li>
+      <li><strong>Page Visit &amp; Suggestion Attribution</strong> (Expanded Scope)</li>
+      <li><strong>Surgical User Deletion</strong> (GDPR &amp; Compliance)</li>
+    </ol>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Q1                                                            -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Q1: Browser Matrix">
+    <h2>Q1: Visitor Browser Matrix</h2>
+    <div class="sql-runner">
+      <button class="sql-run-btn" data-target="q1-result" title="Run Query">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <pre class="sql">SELECT
+    v.Visitor_ID, v.VisitorType, cr.Region_ID, v.Country,
+    bi.Browser_ID AS Browser, bi.BrowserVersion
+FROM VISITOR v
+JOIN  COUNTRY_REGION    cr ON  v.Country     = cr.Country
+LEFT JOIN SESSION       s  ON  v.Visitor_ID  = s.Visitor_ID
+LEFT JOIN SYSTEM_CONFIG sc ON  s.Config_ID   = sc.Config_ID
+LEFT JOIN BROWSER_INFO  bi ON  sc.Browser_ID = bi.Browser_ID
+ORDER BY v.Visitor_ID;</pre>
+    </div>
+    <div class="table-wrap sql-result-table hidden" id="q1-result">
+      <table>
+        <thead>
+          <tr>
+            <th>Visitor_ID</th>
+            <th>VisitorType</th>
+            <th>Region_ID</th>
+            <th>Country</th>
+            <th>Browser</th>
+            <th>BrowserVersion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>7168</td>
+            <td>Returning_Visitor</td>
+            <td>3</td>
+            <td>United Kingdom</td>
+            <td>1</td>
+            <td>124.0</td>
+          </tr>
+          <tr>
+            <td>7169</td>
+            <td>New_Visitor</td>
+            <td>2</td>
+            <td>United States</td>
+            <td>4</td>
+            <td>109.0</td>
+          </tr>
+          <tr>
+            <td>7170</td>
+            <td>Returning_Visitor</td>
+            <td>3</td>
+            <td>United Kingdom</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7171</td>
+            <td>New_Visitor</td>
+            <td>6</td>
+            <td>Brazil</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7172</td>
+            <td>Returning_Visitor</td>
+            <td>6</td>
+            <td>Brazil</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7173</td>
+            <td>Returning_Visitor</td>
+            <td>6</td>
+            <td>Brazil</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7174</td>
+            <td>New_Visitor</td>
+            <td>2</td>
+            <td>United States</td>
+            <td>1</td>
+            <td>124.0</td>
+          </tr>
+          <tr>
+            <td>7175</td>
+            <td>Returning_Visitor</td>
+            <td>1</td>
+            <td>Germany</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7176</td>
+            <td>Returning_Visitor</td>
+            <td>3</td>
+            <td>United Kingdom</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7177</td>
+            <td>New_Visitor</td>
+            <td>1</td>
+            <td>Germany</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7178</td>
+            <td>Returning_Visitor</td>
+            <td>1</td>
+            <td>Germany</td>
+            <td>6</td>
+            <td>99.0</td>
+          </tr>
+          <tr>
+            <td>7179</td>
+            <td>New_Visitor</td>
+            <td>5</td>
+            <td>France</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7180</td>
+            <td>Returning_Visitor</td>
+            <td>2</td>
+            <td>United States</td>
+            <td>2</td>
+            <td>115.0</td>
+          </tr>
+          <tr>
+            <td>7181</td>
+            <td>Returning_Visitor</td>
+            <td>8</td>
+            <td>India</td>
+            <td>3</td>
+            <td>17.1</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout good run-callout" id="q1-callout">A LEFT JOIN ensures even newly registered users without active
+      sessions appear on lists, eliminating "ghost user" gaps in BI tools.</div>
+  </section>
+
+  <!-- Q2 -->
+  <section class="slide" data-section="Q2: Unique Visitors">
+    <h2>Q2: Unique Monthly Visitors</h2>
+    <div class="sql-runner">
+      <button class="sql-run-btn" data-target="q2-result" title="Run Query">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <pre class="sql">SELECT
+    tc.Month,
+    mi.Quarter,
+    COUNT(DISTINCT s.Visitor_ID) AS Visitor_Count
+FROM TIME_CONTEXT tc
+JOIN MONTH_INFO mi ON  tc.Month   = mi.Month
+JOIN SESSION    s  ON  tc.Time_ID = s.Time_ID
+GROUP BY tc.Month, mi.Quarter
+ORDER BY Visitor_Count DESC;</pre>
+    </div>
+    <div class="table-wrap sql-result-table hidden" id="q2-result">
+      <table>
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Quarter</th>
+            <th class="num">Visitor_Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>May</td>
+            <td>2</td>
+            <td class="num"><strong>3297</strong></td>
+          </tr>
+          <tr>
+            <td>Nov</td>
+            <td>4</td>
+            <td class="num">2916</td>
+          </tr>
+          <tr>
+            <td>Mar</td>
+            <td>1</td>
+            <td class="num">1871</td>
+          </tr>
+          <tr>
+            <td>Dec</td>
+            <td>4</td>
+            <td class="num">1709</td>
+          </tr>
+          <tr>
+            <td>Oct</td>
+            <td>4</td>
+            <td class="num">548</td>
+          </tr>
+          <tr>
+            <td>Sep</td>
+            <td>3</td>
+            <td class="num">448</td>
+          </tr>
+          <tr>
+            <td>Aug</td>
+            <td>3</td>
+            <td class="num">430</td>
+          </tr>
+          <tr>
+            <td>Jul</td>
+            <td>3</td>
+            <td class="num">430</td>
+          </tr>
+          <tr>
+            <td>June</td>
+            <td>2</td>
+            <td class="num">288</td>
+          </tr>
+          <tr>
+            <td>Feb</td>
+            <td>1</td>
+            <td class="num">182</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout run-callout" id="q2-callout">Counting DISTINCT Visitor_IDs prevents highly active returning
+      users from artificially inflating monthly traffic reports.</div>
+  </section>
+
+  <!-- Q3 -->
+  <section class="slide" data-section="Q3: Region Updates">
+    <h2>Q3: Relational Region Updates</h2>
+    <div class="sql-runner">
+      <button class="sql-run-btn" data-target="q3-result" title="Run Query">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <pre class="sql">UPDATE VISITOR
+SET Country = 'Japan'
+WHERE Visitor_ID = 1;</pre>
+    </div>
+    <div class="table-wrap sql-result-table hidden" id="q3-result">
+      <div style="padding: 16px;">
+        <h4 style="margin-top:0; margin-bottom: 8px; font-size: 14px; color: var(--muted);">Before UPDATE</h4>
+        <table style="margin-bottom: 16px;">
+          <thead>
+            <tr>
+              <th>Visitor_ID</th>
+              <th>Country</th>
+              <th>Region (resolved)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td style="color: var(--bad)">Germany</td>
+              <td style="color: var(--bad)">1: Europe</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style="margin-bottom: 8px; font-size: 14px; color: var(--muted);">After UPDATE</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Visitor_ID</th>
+              <th>Country</th>
+              <th>Region (resolved)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td style="color: var(--good)">Japan</td>
+              <td style="color: var(--good)">7: Asia</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div
+          style="margin-top: 16px; padding: 12px; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); border-radius: 6px; color: var(--good); font-family: monospace; font-size: 13px;">
+          ✓ Rows affected: 1, Anomalies: 0
+        </div>
+      </div>
+    </div>
+    <div class="callout good run-callout" id="q3-callout">Updating a user's Country automatically resolves their new
+      Region via lookup tables, zero update anomalies.</div>
+  </section>
+
+  <!-- Q4 -->
+  <section class="slide" data-section="Q4: Attribution">
+    <h2>Q4: Page Visit &amp; Suggestion Attribution</h2>
+    <div class="sql-runner">
+      <button class="sql-run-btn" data-target="q4-result" title="Run Query">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <pre class="sql">INSERT INTO PAGE_VISIT 
+    (Session_ID, Page_ID, VisitTimestamp, TimeOnPage, ScrollDepth, Referrer_URL, Suggestion_ID) 
+VALUES 
+    (5553, 11, NOW(), 120.5, 75, 'https://www.google.com', NULL);</pre>
+    </div>
+    <div class="table-wrap sql-result-table hidden" id="q4-result">
+      <table>
+        <thead>
+          <tr>
+            <th>Column</th>
+            <th>Type</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--muted)">Session_ID</td>
+            <td style="color:var(--muted)">FK</td>
+            <td style="color:var(--muted)">Links to session</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">Page_ID</td>
+            <td style="color:var(--muted)">FK</td>
+            <td style="color:var(--muted)">Exact URL reference</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">VisitTimestamp</td>
+            <td style="color:var(--muted)">DATETIME</td>
+            <td style="color:var(--muted)">When visit occurred</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">TimeOnPage</td>
+            <td style="color:var(--muted)">FLOAT</td>
+            <td style="color:var(--muted)">Engagement depth</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">ScrollDepth</td>
+            <td style="color:var(--muted)">INT</td>
+            <td style="color:var(--muted)">% page scrolled</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">Referrer_URL</td>
+            <td style="color:var(--muted)">VARCHAR</td>
+            <td style="color:var(--muted)">Traffic source</td>
+          </tr>
+          <tr>
+            <td style="color:var(--good)">Suggestion_ID</td>
+            <td style="color:var(--good)">FK, NULL</td>
+            <td style="color:var(--good)">Social ROI tracker ★</td>
+          </tr>
+        </tbody>
+      </table>
+      <div
+        style="padding: 12px 16px; background: rgba(245,166,35,0.1); border-top: 1px solid rgba(245,166,35,0.2); font-size: 13px; color: var(--text);">
+        <strong style="color: #f5a623; display: block; margin-bottom: 4px;">EXPANDED SCOPE: SUGGESTION
+          TRACKING</strong>
+        When Suggestion_ID is NOT NULL, the visit is traced back to a specific user recommendation, enabling you to
+        calculate the exact ROI of your social suggestion feature.
+      </div>
+    </div>
+    <div class="callout run-callout" id="q4-callout">New events map exact URLs, scroll depth, and Suggestion_ID,
+      providing pixel-perfect attribution for social ROI.</div>
+  </section>
+
+  <!-- Q5 -->
+  <section class="slide" data-section="Q5: Deletion">
+    <h2>Q5: Surgical User Deletion</h2>
+    <div class="sql-runner">
+      <button class="sql-run-btn" data-target="q5-result" title="Run Query">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <pre class="sql">UPDATE SESSION SET SuggestedBy = NULL WHERE SuggestedBy = 1;
+DELETE FROM PAGE_VISIT WHERE Session_ID IN (SELECT Session_ID FROM SESSION WHERE Visitor_ID = 1);
+-- ... (cascades through metrics, activity, sessions, suggestions) ...
+DELETE FROM VISITOR WHERE Visitor_ID = 1;</pre>
+    </div>
+    <div class="table-wrap sql-result-table hidden" id="q5-result">
+      <table>
+        <thead>
+          <tr>
+            <th colspan="2" style="text-align: left;">7 step bottom up deletion order</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="width: 40px;">
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                1</div>
+            </td>
+            <td>Nullify <code>SuggestedBy</code> references in SESSION</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                2</div>
+            </td>
+            <td>Delete <code>PAGE_VISIT</code> records</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                3</div>
+            </td>
+            <td>Delete <code>PAGE_METRICS</code> records</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                4</div>
+            </td>
+            <td>Delete <code>ACTIVITY_LOG</code> records</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                5</div>
+            </td>
+            <td>Delete <code>SESSION</code> records</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px;">
+                6</div>
+            </td>
+            <td>Delete <code>SUGGESTION</code> records</td>
+          </tr>
+          <tr>
+            <td>
+              <div
+                style="width: 24px; height: 24px; border-radius: 50%; background: rgba(248,113,113,0.3); border: 1px solid rgba(248,113,113,0.6); display: flex; align-items: center; justify-content: center; color: var(--bad); font-family: monospace; font-size: 12px; font-weight: bold;">
+                7</div>
+            </td>
+            <td>Delete <code>VISITOR</code> profile</td>
+          </tr>
+        </tbody>
+      </table>
+      <div
+        style="padding: 12px 16px; background: rgba(248,113,113,0.1); border-top: 1px solid rgba(248,113,113,0.2); font-size: 13px; color: var(--text);">
+        Referential integrity remains <strong style="color: var(--bad);">100% intact</strong>. No orphaned records. No
+        accidental page deletions.
+      </div>
+    </div>
+    <div class="callout good run-callout" id="q5-callout">A 7 step bottom up deletion protocol safely unwires user
+      footprints without violating strict foreign key constraints.</div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 14. CONCLUSION                                                -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Conclusion">
+    <h2>What We Delivered</h2>
+    <div class="two-col" style="margin-top: 10px;">
+      <div class="stack">
+        <h3>Database</h3>
+        <ul>
+          <li>35 column UNF to <strong>11 table 3NF schema</strong></li>
+          <li>Insert / update / delete anomalies eliminated</li>
+          <li>Lookup tables reduce maintenance cost</li>
+          <li>Documented ER diagram with keys and relationships</li>
+        </ul>
+      </div>
+      <div class="stack">
+        <h3>Operational Power</h3>
+        <ul>
+          <li><strong>Attribution</strong>: High-fidelity for page suggestions</li>
+          <li><strong>Compliance</strong>: Surgical data deletion protocols</li>
+          <li><strong>Analytics</strong>: Guaranteed mathematically accurate unique visitor metrics</li>
+          <li><strong>Scale</strong>: Scalable architecture ready for production deployment</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- 15. Q&A                                                       -->
+  <!-- ============================================================ -->
+  <section class="slide" data-section="Q&amp;A" style="text-align: center; align-items: center;">
+    <h1 style="font-size: 88px; margin-bottom: 20px;">Questions?</h1>
+    <p style="font-size: 22px; color: var(--accent-2); margin-bottom: 60px;">Thank you for listening.</p>
+    <p class="small">Yusuf Kalkan, Demirhan Uray, Cem Karakale, Halil Emre Ünal, Celal Çağlar Okuducu</p>
+    <p class="tiny" style="margin-top: 12px;">CSE 204: Group 16: Instructor: Joseph William Ledet</p>
+  </section>
+
+  <script>
+    // Number the slides + build nav dots
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    const nav = document.getElementById('nav');
+
+    slides.forEach((s, i) => {
+      s.dataset.n = String(i + 1).padStart(2, '0');
+      s.dataset.total = String(total).padStart(2, '0');
+      s.id = 'slide-' + (i + 1);
+
+      const dot = document.createElement('a');
+      dot.href = '#slide-' + (i + 1);
+      dot.title = s.dataset.section || ('Slide ' + (i + 1));
+      nav.appendChild(dot);
+    });
+
+    // Highlight active nav dot on scroll
+    const dots = nav.querySelectorAll('a');
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('in-view');
+          const idx = [...slides].indexOf(e.target);
+          dots.forEach(d => d.classList.remove('active'));
+          if (dots[idx]) dots[idx].classList.add('active');
+
+          // Fire confetti on the last slide (Q&A)
+          if (idx === slides.length - 1 && !e.target.dataset.confettiFired) {
+            e.target.dataset.confettiFired = 'true';
+
+            const defaults = {
+              spread: 360,
+              ticks: 50,
+              gravity: 0,
+              decay: 0.94,
+              startVelocity: 30,
+              shapes: ['star'],
+              colors: ['#26ccff', '#a25afd', '#ff5e7e', '#88ff5a', '#fcff42', '#ffa62d', '#ff36ff']
+            };
+
+            function shoot() {
+              confetti({
+                ...defaults,
+                particleCount: 40,
+                scalar: 1.2,
+                shapes: ['star']
+              });
+
+              confetti({
+                ...defaults,
+                particleCount: 10,
+                scalar: 0.75,
+                shapes: ['circle']
+              });
+            }
+
+            // A few discrete bursts from the bottom instead of a continuous stream
+            setTimeout(shoot, 0);
+            setTimeout(shoot, 100);
+            setTimeout(shoot, 200);
+
+            // Side cannons (bottom left/right)
+            const lateralDefaults = {
+              particleCount: 30,
+              spread: 60,
+              startVelocity: 45,
+              zIndex: 10000,
+              origin: { y: 0.9 }
+            };
+
+            setTimeout(() => confetti({ ...lateralDefaults, angle: 60, origin: { x: 0, y: 0.9 } }), 500);
+            setTimeout(() => confetti({ ...lateralDefaults, angle: 120, origin: { x: 1, y: 0.9 } }), 700);
+            setTimeout(() => confetti({ ...lateralDefaults, angle: 60, origin: { x: 0, y: 0.9 } }), 1200);
+            setTimeout(() => confetti({ ...lateralDefaults, angle: 120, origin: { x: 1, y: 0.9 } }), 1400);
+          }
+        } else {
+          e.target.classList.remove('in-view');
+        }
+      });
+    }, { threshold: 0.55 });
+    slides.forEach(s => io.observe(s));
+
+    // Keyboard navigation
+    function currentIndex() {
+      const y = window.scrollY + window.innerHeight / 2;
+      for (let i = 0; i < slides.length; i++) {
+        const r = slides[i].getBoundingClientRect();
+        const top = r.top + window.scrollY;
+        if (y >= top && y < top + r.height) return i;
+      }
+      return 0;
+    }
+    function goto(i) {
+      i = Math.max(0, Math.min(slides.length - 1, i));
+      slides[i].scrollIntoView({ behavior: 'smooth' });
+    }
+    document.addEventListener('keydown', e => {
+      // If the event started inside a focused element that handles its own keys, let it be
+      if (e.target.closest('pre, input, textarea')) return;
+
+      const currentSlide = slides[currentIndex()];
+      const tableWrap = currentSlide.querySelector('.table-wrap');
+
+      // Handle horizontal scrolling for tables with ArrowLeft/ArrowRight
+      if (tableWrap && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const scrollAmount = 150;
+        if (e.key === 'ArrowRight') {
+          // Only scroll table if there's room to scroll right
+          if (tableWrap.scrollLeft < (tableWrap.scrollWidth - tableWrap.clientWidth - 5)) {
+            e.preventDefault();
+            tableWrap.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            return;
+          }
+        } else {
+          // Only scroll table if there's room to scroll left
+          if (tableWrap.scrollLeft > 5) {
+            e.preventDefault();
+            tableWrap.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            return;
+          }
+        }
+      }
+
+      // Default slide navigation
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault(); goto(currentIndex() + 1);
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault(); goto(currentIndex() - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault(); goto(0);
+      } else if (e.key === 'End') {
+        e.preventDefault(); goto(slides.length - 1);
+      }
+    });
+
+    // Minimal SQL syntax highlighter
+    const KW = new Set((
+      'SELECT FROM WHERE GROUP BY ORDER HAVING LIMIT JOIN INNER LEFT RIGHT OUTER ON AS ' +
+      'AND OR NOT IN IS NULL TRUE FALSE CASE WHEN THEN ELSE END DISTINCT COUNT SUM AVG ' +
+      'MIN MAX ROUND CAST BETWEEN LIKE UNION ALL DESC ASC'
+    ).split(' '));
+    document.querySelectorAll('pre.sql').forEach(pre => {
+      const src = pre.textContent;
+      let out = '';
+      const re = /('[^']*'|--[^\n]*|\d+(?:\.\d+)?|::\w+|[A-Za-z_][A-Za-z0-9_]*|\s+|.)/g;
+      let m;
+      while ((m = re.exec(src)) !== null) {
+        const tok = m[0];
+        if (tok.startsWith("'")) out += '<span class="st">' + tok + '</span>';
+        else if (tok.startsWith('--')) out += '<span class="cm">' + tok + '</span>';
+        else if (tok.startsWith('::')) out += '<span class="t">' + tok + '</span>';
+        else if (/^\d/.test(tok)) out += '<span class="nm">' + tok + '</span>';
+        else if (KW.has(tok.toUpperCase())) out += '<span class="kw">' + tok + '</span>';
+        else out += tok.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      }
+      pre.innerHTML = out;
+    });
+
+    // --- Smooth Cursor Logic ---
+    document.addEventListener("DOMContentLoaded", function () {
+      const cursor = document.getElementById('smooth-cursor');
+      if (!cursor) return;
+
+      let mouseX = 0, mouseY = 0;
+      let cursorX = 0, cursorY = 0;
+      let velocityX = 0, velocityY = 0;
+      let lastX = 0, lastY = 0;
+      let angle = 0;
+      let lastTime = Date.now();
+      let isVisible = false;
+      let scale = 1;
+
+      // Spring constants (approximating the React spring config)
+      const damping = 0.15; // smoothness
+      const stiffness = 0.1;
+
+      window.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch') return;
+        if (!isVisible) {
+          isVisible = true;
+          cursor.style.opacity = '1';
+          // Initial snap
+          cursorX = e.clientX;
+          cursorY = e.clientY;
+          lastX = e.clientX;
+          lastY = e.clientY;
+        }
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      }, { passive: true });
+
+      window.addEventListener('pointerleave', () => {
+        isVisible = false;
+        cursor.style.opacity = '0';
+      });
+
+      function animate() {
+        const now = Date.now();
+        const dt = now - lastTime;
+        if (dt > 0) {
+          // Simple lerp-based smoothing
+          const dx = mouseX - cursorX;
+          const dy = mouseY - cursorY;
+
+          cursorX += dx * damping;
+          cursorY += dy * damping;
+
+          // Velocity for rotation
+          const vx = cursorX - lastX;
+          const vy = cursorY - lastY;
+          const speed = Math.sqrt(vx * vx + vy * vy);
+
+          if (speed > 0.1) {
+            const targetAngle = Math.atan2(vy, vx) * (180 / Math.PI) + 90;
+            // Smooth rotation (handling wrap-around)
+            let diff = targetAngle - angle;
+            while (diff < -180) diff += 360;
+            while (diff > 180) diff -= 360;
+            angle += diff * 0.15;
+
+            scale = 0.9 + (Math.max(0, 0.1 - speed * 0.01));
+          } else {
+            scale += (1 - scale) * 0.1;
+          }
+
+          cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) rotate(${angle}deg) scale(${scale})`;
+
+          lastX = cursorX;
+          lastY = cursorY;
+          lastTime = now;
+        }
+        requestAnimationFrame(animate);
+      }
+
+      // Scale on click
+      window.addEventListener('mousedown', () => { scale = 0.7; });
+      window.addEventListener('mouseup', () => { scale = 1; });
+
+      requestAnimationFrame(animate);
+    });
+
+    // --- Number Ticker Logic ---
+    document.addEventListener("DOMContentLoaded", function () {
+      const tickers = document.querySelectorAll('.number-ticker');
+
+      // Set up observer to trigger animation when in view
+      const tickerObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            if (el.dataset.animated) return; // run once
+            el.dataset.animated = 'true';
+
+            const value = parseFloat(el.getAttribute('data-value')) || 0;
+            const direction = el.getAttribute('data-direction') || 'up';
+            const delay = parseFloat(el.getAttribute('data-delay')) || 0;
+            const decimalPlaces = parseInt(el.getAttribute('data-decimals')) || 0;
+            const startValue = parseFloat(el.getAttribute('data-start')) || 0;
+            const duration = 2000; // 2 seconds (similar to spring damping effect)
+
+            let startTime = null;
+            let timer = null;
+
+            const startNum = direction === 'down' ? value : startValue;
+            const endNum = direction === 'down' ? startValue : value;
+
+            function step(timestamp) {
+              if (!startTime) startTime = timestamp;
+              const progress = timestamp - startTime;
+
+              if (progress < duration) {
+                const t = progress / duration;
+                // easeOutExpo for spring-like deceleration
+                const easedProgress = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+                const current = startNum + (endNum - startNum) * easedProgress;
+
+                el.textContent = Intl.NumberFormat("en-US", {
+                  minimumFractionDigits: decimalPlaces,
+                  maximumFractionDigits: decimalPlaces,
+                }).format(current);
+
+                timer = requestAnimationFrame(step);
+              } else {
+                el.textContent = Intl.NumberFormat("en-US", {
+                  minimumFractionDigits: decimalPlaces,
+                  maximumFractionDigits: decimalPlaces,
+                }).format(endNum);
+              }
+            }
+
+            if (delay > 0) {
+              setTimeout(() => { timer = requestAnimationFrame(step); }, delay * 1000);
+            } else {
+              timer = requestAnimationFrame(step);
+            }
+          }
+        });
+      }, { threshold: 0.1 });
+
+      tickers.forEach(t => tickerObserver.observe(t));
+    });
+
+    // --- SQL Run Button Logic ---
+    (function () {
+      function runQuery(btn) {
+        const targetId = btn.getAttribute('data-target');
+        const table = document.getElementById(targetId);
+        if (!table) return;
+
+        // If already visible, reset everything
+        if (!table.classList.contains('hidden')) {
+          table.className = 'table-wrap sql-result-table hidden';
+          const calloutId = targetId.replace('result', 'callout');
+          const callout = document.getElementById(calloutId);
+          if (callout) callout.classList.remove('visible');
+          btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+          btn.classList.remove('running');
+          return;
+        }
+
+        // Disable button during animation
+        btn.disabled = true;
+        btn.classList.add('running');
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z" /></svg>';
+
+        // Phase 1: Show table frame (skeleton)
+        table.classList.remove('hidden');
+        table.classList.add('phase1');
+
+        setTimeout(() => {
+          // Phase 2: Animate column headers
+          table.classList.remove('phase1');
+          table.classList.add('phase2');
+
+          // Count headers to calculate duration
+          const thCount = table.querySelectorAll('thead th').length;
+          const phase2Duration = 300 + thCount * 60 + 100;
+
+          setTimeout(() => {
+            // Phase 3: Animate data rows
+            table.classList.remove('phase2');
+            table.classList.add('phase3');
+
+            const rowCount = table.querySelectorAll('tbody tr').length;
+            const phase3Duration = 350 + rowCount * 70 + 100;
+
+            setTimeout(() => {
+              // Done — show callout
+              table.classList.remove('phase3');
+              const calloutId = targetId.replace('result', 'callout');
+              const callout = document.getElementById(calloutId);
+              if (callout) callout.classList.add('visible');
+
+              // Update button to Reset state
+              btn.disabled = false;
+              btn.classList.remove('running');
+              btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
+            }, phase3Duration);
+          }, phase2Duration);
+        }, 500);
+      }
+
+      document.querySelectorAll('.sql-run-btn').forEach(btn => {
+        btn.addEventListener('click', () => runQuery(btn));
+      });
+    })();
+  </script>
+
+  <div id="smooth-cursor">
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="35" viewBox="0 0 50 54" fill="none">
+      <g filter="url(#filter0_d_91_7928)">
+        <path
+          d="M42.6817 41.1495L27.5103 6.79925C26.7269 5.02557 24.2082 5.02558 23.3927 6.79925L7.59814 41.1495C6.75833 42.9759 8.52712 44.8902 10.4125 44.1954L24.3757 39.0496C24.8829 38.8627 25.4385 38.8627 25.9422 39.0496L39.8121 44.1954C41.6849 44.8902 43.4884 42.9759 42.6817 41.1495Z"
+          fill="black" />
+        <path
+          d="M43.7146 40.6933L28.5431 6.34306C27.3556 3.65428 23.5772 3.69516 22.3668 6.32755L6.57226 40.6778C5.3134 43.4156 7.97238 46.298 10.803 45.2549L24.7662 40.109C25.0221 40.0147 25.2999 40.0156 25.5494 40.1082L39.4193 45.254C42.2261 46.2953 44.9254 43.4347 43.7146 40.6933Z"
+          stroke="white" stroke-width="2.25825" />
+      </g>
+      <defs>
+        <filter id="filter0_d_91_7928" x="0.602397" y="0.952444" width="49.0584" height="52.428"
+          filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feFlood flood-opacity="0" result="BackgroundImageFix" />
+          <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha" />
+          <feOffset dy="2.25825" />
+          <feGaussianBlur std-deviation="2.25825" />
+          <feComposite in2="hardAlpha" operator="out" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0" />
+          <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_91_7928" />
+          <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_91_7928" result="shape" />
+        </filter>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- SVG Filters for Morphing Text -->
+  <svg id="filters" class="fixed" style="width:0; height:0; position:fixed;" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <filter id="threshold">
+        <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 255 -140" />
+      </filter>
+    </defs>
+  </svg>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const morphTime = 1.5;
+      const cooldownTime = 0.5;
+
+      document.querySelectorAll('.morphing-text').forEach(container => {
+        let rawTexts = container.getAttribute('data-texts');
+        if (!rawTexts) return;
+        const texts = JSON.parse(rawTexts);
+        if (!texts.length) return;
+
+        const text1 = document.createElement('span');
+        const text2 = document.createElement('span');
+        container.appendChild(text1);
+        container.appendChild(text2);
+
+        let textIndex = 0;
+        let morph = 0;
+        let cooldown = 0;
+        let time = new Date();
+
+        text1.textContent = texts[textIndex % texts.length];
+        text2.textContent = texts[(textIndex + 1) % texts.length];
+
+        function setStyles(fraction) {
+          text2.style.filter = `blur(${Math.min(8 / fraction - 8, 100)}px)`;
+          text2.style.opacity = `${Math.pow(fraction, 0.4) * 100}%`;
+
+          const invertedFraction = 1 - fraction;
+          text1.style.filter = `blur(${Math.min(8 / invertedFraction - 8, 100)}px)`;
+          text1.style.opacity = `${Math.pow(invertedFraction, 0.4) * 100}%`;
+
+          text1.textContent = texts[textIndex % texts.length];
+          text2.textContent = texts[(textIndex + 1) % texts.length];
+        }
+
+        function doMorph() {
+          morph -= cooldown;
+          cooldown = 0;
+
+          let fraction = morph / morphTime;
+
+          if (fraction > 1) {
+            cooldown = cooldownTime;
+            fraction = 1;
+          }
+
+          setStyles(fraction);
+
+          if (fraction === 1) {
+            textIndex++;
+          }
+        }
+
+        function doCooldown() {
+          morph = 0;
+          text2.style.filter = "none";
+          text2.style.opacity = "100%";
+          text1.style.filter = "none";
+          text1.style.opacity = "0%";
+        }
+
+        let rafId;
+        function animate() {
+
+          const newTime = new Date();
+          const dt = (newTime.getTime() - time.getTime()) / 1000;
+          time = newTime;
+
+          cooldown -= dt;
+
+          if (cooldown <= 0) {
+            doMorph();
+          } else {
+            doCooldown();
+          }
+          rafId = requestAnimationFrame(animate);
+        }
+
+        // Pre-warm the state
+        doCooldown();
+        animate();
+      });
+    });
+  </script><!-- Rough Notation (Text Highlighter) Script -->
+  <script src="https://unpkg.com/rough-notation/lib/rough-notation.iife.js"></script>
+  <script>
+    function initHighlighter(el) {
+      if (el.dataset.annotated === 'true') {
+        // If already annotated, we might want to refresh it (remove old SVG)
+        // This is a bit tricky with RoughNotation, but we can try to find sibling SVGs
+      }
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const action = el.getAttribute('data-action') || 'highlight';
+      let color = el.getAttribute('data-color') || (isDark ? '#444444' : '#eeeeee');
+
+      // Theme-aware color adjustments for readability
+      if (isDark) {
+        if (color === '#ffe066') color = '#b38f00'; // Amber/Dark Yellow for white text
+        if (color === '#87CEFA') color = '#005a8d'; // Deeper blue
+        if (color === '#ff4d4d') color = '#990000'; // Deeper red
+        if (color === '#000000') color = '#ffffff'; // Invert black underlines
+      } else {
+        // Light mode defaults
+        if (color === '#ffe066') color = '#ffe066';
+      }
+
+      const strokeWidth = parseFloat(el.getAttribute('data-stroke-width')) || 1.5;
+      const animationDuration = parseInt(el.getAttribute('data-animation-duration')) || 600;
+      const iterations = parseInt(el.getAttribute('data-iterations')) || 2;
+      const multiline = el.getAttribute('data-multiline') !== 'false';
+      const padding = parseInt(el.getAttribute('data-padding')) || 2;
+
+      const annotation = RoughNotation.annotate(el, {
+        type: action,
+        color: color,
+        strokeWidth: strokeWidth,
+        animationDuration: animationDuration,
+        iterations: iterations,
+        padding: padding,
+        multiline: multiline
+      });
+
+      el.dataset.annotated = 'true';
+      el._annotation = annotation; // Store reference to hide/show if needed
+      setTimeout(() => annotation.show(), 400);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const highlights = document.querySelectorAll('.highlighter');
+
+      const highlightObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            if (el.dataset.annotated === 'true') return;
+            initHighlighter(el);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      highlights.forEach(h => highlightObserver.observe(h));
+
+      // Expose refresh function to window for theme toggler
+      window.refreshHighlighters = () => {
+        highlights.forEach(el => {
+          if (el._annotation) {
+            el._annotation.remove(); // Remove existing annotation
+            el.dataset.annotated = 'false';
+          }
+          // If it's in view, re-init
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight && rect.bottom > 0) {
+            initHighlighter(el);
+          }
+        });
+      };
+    });
+  </script>
+
+
+
+  <script>
+    // Loading Screen Toggle
+    (function () {
+      const loadingScreen = document.getElementById('loading-screen');
+      const startPresentation = () => {
+        loadingScreen.classList.add('hidden');
+        document.body.classList.remove('loading');
+        // Trigger any other entry animations if needed
+        window.scrollTo(0, 0);
+
+        // Remove listener after first click
+        window.removeEventListener('click', startPresentation);
+        window.removeEventListener('keydown', startPresentation);
+      };
+
+      window.addEventListener('click', startPresentation);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') startPresentation();
+      });
+    })();
+  </script>
+
+  <script>
+    // Animated Theme Toggler Logic (Magic UI Style)
+    (function () {
+      const button = document.getElementById('animated-theme-toggler');
+      const iconContainer = document.getElementById('toggler-icon-container');
+      const duration = 400;
+
+      const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+      const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+
+      function updateThemeUI() {
+        const isDark = document.documentElement.classList.contains('dark');
+        iconContainer.innerHTML = isDark ? sunIcon : moonIcon;
+
+        // Update ER Diagram image if it exists
+        const erImg = document.getElementById('er-diagram-img');
+        if (erImg) {
+          erImg.src = isDark ? 'black.png' : 'white.png';
+        }
+      }
+
+      // Initialize theme (Default to dark)
+      const savedTheme = localStorage.getItem('theme');
+
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+      updateThemeUI();
+      const toggleTheme = () => {
+        const { top, left, width, height } = button.getBoundingClientRect();
+        const x = left + width / 2;
+        const y = top + height / 2;
+
+        const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+
+        const maxRadius = Math.hypot(
+          Math.max(x, viewportWidth - x),
+          Math.max(y, viewportHeight - y)
+        );
+
+        const applyTheme = () => {
+          const isDark = document.documentElement.classList.toggle('dark');
+          localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          updateThemeUI();
+          if (window.refreshHighlighters) window.refreshHighlighters();
+        };
+
+
+        // Browser compatibility check for View Transitions API
+        if (typeof document.startViewTransition !== 'function') {
+          applyTheme();
+          return;
+        }
+
+        const transition = document.startViewTransition(() => {
+          applyTheme();
+        });
+
+        transition.ready.then(() => {
+          document.documentElement.animate(
+            {
+              clipPath: [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${maxRadius}px at ${x}px ${y}px)`,
+              ],
+            },
+            {
+              duration,
+              easing: "ease-in-out",
+              pseudoElement: "::view-transition-new(root)",
+            }
+          );
+        });
+      };
+
+      button.addEventListener('click', toggleTheme);
+    })();
+  </script>
+
+  <script>
+    /**
+     * Option (Alt) + Click Zoom Logic
+     * Allows zooming in on a specific part of the presentation for better visibility.
+     */
+    (function () {
+      let isZoomed = false;
+      const html = document.documentElement;
+
+      window.addEventListener('click', (e) => {
+        // Check for Option (Alt) or Ctrl key
+        if (e.altKey || e.ctrlKey) {
+          e.preventDefault();
+
+          if (!isZoomed) {
+            // clientX/Y is viewport-relative; add scroll offset so origin
+            // correctly maps to the element being clicked on the page.
+            const x = e.clientX + window.scrollX;
+            const y = e.clientY + window.scrollY;
+
+            html.style.transformOrigin = `${x}px ${y}px`;
+            html.style.transform = 'scale(1.6)';
+            html.classList.add('is-zoomed');
+            isZoomed = true;
+          } else {
+            resetZoom();
+          }
+        }
+      });
+
+      let rafId = null;
+      window.addEventListener('mousemove', (e) => {
+        if (isZoomed) {
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            // Same fix: include scroll offset for correct mapping
+            const x = e.clientX + window.scrollX;
+            const y = e.clientY + window.scrollY;
+            html.style.transformOrigin = `${x}px ${y}px`;
+          });
+        }
+      });
+
+      function resetZoom() {
+        html.style.transform = 'none';
+        // We don't reset origin to 0,0 immediately to avoid a jump during the zoom-out transition
+        setTimeout(() => {
+          if (!isZoomed) html.style.transformOrigin = '50% 50%';
+        }, 600);
+        html.classList.remove('is-zoomed');
+        isZoomed = false;
+      }
+
+      // Reset zoom on Escape key or when navigating to another slide
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isZoomed) {
+          resetZoom();
+        }
+      });
+
+      // Reset zoom on slide change (using the existing 'goto' or scroll events)
+      // We can listen for scroll events or just reset if we detect a change
+      let lastScrollY = window.scrollY;
+      window.addEventListener('scroll', () => {
+        if (isZoomed && Math.abs(window.scrollY - lastScrollY) > 50) {
+          resetZoom();
+        }
+        lastScrollY = window.scrollY;
+      }, { passive: true });
+
+    })();
+  </script>
+
+  <script>
+    /**
+     * JS-based Auto Scroll for Marquee Tables
+     * Allows the table to scroll automatically, but pauses on hover 
+     * so the user can manually scroll using the scrollbar.
+     */
+    (function () {
+      const marquees = document.querySelectorAll('.unf-marquee');
+      
+      marquees.forEach(marquee => {
+        let isPaused = false;
+        let direction = 1; // 1 for right, -1 for left
+        const speed = 0.5; // pixels per frame
+
+        // Pause auto-scroll on interaction
+        marquee.addEventListener('mouseenter', () => isPaused = true);
+        marquee.addEventListener('mouseleave', () => isPaused = false);
+        marquee.addEventListener('touchstart', () => isPaused = true);
+        marquee.addEventListener('touchend', () => {
+          setTimeout(() => isPaused = false, 1000);
+        });
+        
+        function autoScroll() {
+          if (!isPaused) {
+            marquee.scrollLeft += (speed * direction);
+            
+            // Reverse direction if we hit the ends
+            if (marquee.scrollLeft >= (marquee.scrollWidth - marquee.clientWidth - 1)) {
+              direction = -1;
+            } else if (marquee.scrollLeft <= 0) {
+              direction = 1;
+            }
+          }
+          requestAnimationFrame(autoScroll);
+        }
+        
+        // Give the DOM a moment to render before starting
+        setTimeout(() => {
+          requestAnimationFrame(autoScroll);
+        }, 500);
+      });
+    })();
+  </script>
+
+</body>
+
+</html>
